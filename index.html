@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 뭐 먹지? 룰렛 (DB 연동)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9ddcc83d3b7ed7f48495e2de9a0a4460&libraries=services"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .roulette-container {
+            position: relative;
+            width: 90vw;
+            height: 90vw;
+            max-width: 450px;
+            max-height: 450px;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            transition: transform 5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 30px solid #ef4444; /* red-500 */
+            z-index: 10;
+        }
+        .blinking {
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% {
+                opacity: 0.3;
+            }
+        }
+        /* 스크롤바 스타일 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; /* slate-100 */
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* slate-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-xl mx-auto">
+        <div class="text-center mb-4">
+            <h1 class="text-4xl font-bold text-gray-800">오늘 뭐 먹지?</h1>
+            <p id="status-message" class="text-gray-600 mt-2 h-6">Reset 버튼을 눌러 주변 식당을 찾아보세요!</p>
+        </div>
+
+        <div class="roulette-container mx-auto mb-4">
+            <div class="pointer"></div>
+            <canvas id="rouletteCanvas"></canvas>
+        </div>
+
+        <div class="flex justify-center space-x-2 mb-4">
+            <button id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                Reset
+            </button>
+            <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                START
+            </button>
+        </div>
+        
+        <!-- 룰렛 저장 UI -->
+        <div id="save-container" class="hidden flex justify-center items-center space-x-2 mb-4 p-2 bg-white rounded-lg shadow">
+            <input type="text" id="roulette-name-input" placeholder="룰렛 이름 입력" class="border rounded px-2 py-1 flex-grow">
+            <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-md">저장</button>
+        </div>
+
+        <!-- 저장된 룰렛 목록 -->
+        <div class="w-full bg-white rounded-lg shadow p-4">
+            <h2 class="text-xl font-bold text-center mb-2">저장된 룰렛 목록</h2>
+            <div id="saved-roulettes-list" class="h-40 overflow-y-auto custom-scrollbar">
+                <p class="text-center text-gray-500">저장된 룰렛이 없습니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Firebase 모듈 임포트 ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, setDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- UI 요소 및 전역 변수 ---
+        const canvas = document.getElementById('rouletteCanvas');
+        const ctx = canvas.getContext('2d');
+        const resetBtn = document.getElementById('resetBtn');
+        const startBtn = document.getElementById('startBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const statusMessage = document.getElementById('status-message');
+        const saveContainer = document.getElementById('save-container');
+        const rouletteNameInput = document.getElementById('roulette-name-input');
+        const savedRoulettesList = document.getElementById('saved-roulettes-list');
+        
+        const SEGMENT_COUNT = 9;
+        const colors = ['#fde68a', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2', '#fef3c7', '#e0f2fe', '#fce7f3', '#e5e7eb'];
+        let restaurants = [];
+        let isSpinning = false;
+        let winnerIndex = -1;
+        let blinkAnimationId;
+
+        let db, auth, userId;
+
+        // --- Firebase 초기화 및 인증 ---
+        async function initializeFirebase() {
+            try {
+                // 사용자가 제공한 Firebase 설정 정보로 교체된 부분입니다.
+                const firebaseConfig = {
+                  apiKey: "AIzaSyCULXkDYqAfCtpN7PmQktYachfyB7P8dqk",
+                  authDomain: "lunch-78f47.firebaseapp.com",
+                  projectId: "lunch-78f47",
+                  storageBucket: "lunch-78f47.appspot.com",
+                  messagingSenderId: "612330931668",
+                  appId: "1:612330931668:web:07ab3d8ac7bba96f5ac241"
+                };
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("Authenticated with user ID:", userId);
+                        loadSavedRoulettes();
+                        resetBtn.disabled = false;
+                    } else {
+                        console.log("User is not signed in.");
+                        signInAnonymously(auth).catch(error => {
+                            console.error("Anonymous sign-in failed:", error);
+                        });
+                    }
+                });
+
+            } catch (error) {
+                console.error("Firebase 초기화 실패:", error);
+                statusMessage.textContent = "앱 초기화에 실패했습니다.";
+            }
+        }
+
+        // --- 초기화 ---
+        window.onload = () => {
+            const size = Math.min(window.innerWidth * 0.9, 450);
+            canvas.width = size;
+            canvas.height = size;
+            resetBtn.disabled = true;
+            drawWheel();
+            initializeFirebase();
+        };
+
+        // --- 이벤트 리스너 ---
+        resetBtn.addEventListener('click', handleReset);
+        startBtn.addEventListener('click', handleStart);
+        saveBtn.addEventListener('click', handleSave);
+
+        // --- 함수 ---
+        function drawWheel() {
+            const radius = canvas.width / 2;
+            const segmentAngle = (2 * Math.PI) / SEGMENT_COUNT;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(radius, radius);
+
+            for (let i = 0; i < SEGMENT_COUNT; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                const startAngle = segmentAngle * i - segmentAngle / 2;
+                const endAngle = segmentAngle * (i + 1) - segmentAngle / 2;
+                ctx.arc(0, 0, radius - 5, startAngle, endAngle);
+                ctx.closePath();
+                
+                if (winnerIndex === i && canvas.classList.contains('blinking')) {
+                     ctx.fillStyle = i % 2 === 0 ? '#fca5a5' : '#f87171';
+                } else {
+                    ctx.fillStyle = colors[i % colors.length];
+                }
+                ctx.fill();
+                
+                ctx.save();
+                ctx.rotate(startAngle + segmentAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#1f2937';
+                ctx.font = `bold ${radius * 0.08}px 'Noto Sans KR'`;
+                
+                const text = restaurants[i] ? restaurants[i].place_name : (restaurants.length > 0 ? '?' : 'Reset!');
+                const textRadius = radius * 0.9;
+                
+                let displayText = text;
+                if (ctx.measureText(text).width > radius * 0.7) {
+                    displayText = text.substring(0, 7) + '...';
+                }
+
+                ctx.fillText(displayText, textRadius, 0);
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+
+        function handleReset() {
+            if (isSpinning) return;
+            resetState();
+            statusMessage.textContent = '현재 위치를 확인 중입니다...';
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError);
+            } else {
+                statusMessage.textContent = '위치 정보를 사용할 수 없습니다.';
+                resetBtn.disabled = false;
+            }
+        }
+        
+        function resetState() {
+            isSpinning = false;
+            startBtn.disabled = true;
+            resetBtn.disabled = true;
+            saveContainer.classList.add('hidden');
+            restaurants = [];
+            winnerIndex = -1;
+            canvas.style.transition = 'none';
+            canvas.style.transform = `rotate(0deg)`;
+            canvas.classList.remove('blinking');
+            if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+            drawWheel();
+        }
+
+        function onGeoSuccess(position) {
+            statusMessage.textContent = '주변 식당 정보를 가져오는 중...';
+            fetchRestaurants(position.coords.latitude, position.coords.longitude);
+        }
+
+        function onGeoError(error) {
+            statusMessage.textContent = '위치 정보를 가져올 수 없습니다.';
+            resetBtn.disabled = false;
+            console.error(error);
+        }
+
+        function fetchRestaurants(lat, lng) {
+            const places = new kakao.maps.services.Places();
+            places.categorySearch('FD6', (result, status) => {
+                if (status === kakao.maps.services.Status.OK) {
+                    processRestaurantData(result);
+                } else {
+                    statusMessage.textContent = '주변 식당 정보를 가져오는데 실패했습니다.';
+                    resetBtn.disabled = false;
+                }
+            }, { location: new kakao.maps.LatLng(lat, lng), radius: 1000, size: 15 });
+        }
+
+        function processRestaurantData(data) {
+            if (data.length < SEGMENT_COUNT) {
+                 statusMessage.textContent = `식당을 ${data.length}곳만 찾았어요. 룰렛을 채울 수 없습니다.`;
+                 resetBtn.disabled = false;
+                 return;
+            }
+            
+            const sortedByRating = [...data].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            const withReviews = data.filter(d => d.id);
+            
+            let finalRestaurants = [];
+            let usedIds = new Set();
+
+            for (const place of sortedByRating) {
+                if (finalRestaurants.length < 3 && !usedIds.has(place.id)) {
+                    finalRestaurants.push(place);
+                    usedIds.add(place.id);
+                }
+            }
+            
+             for (const place of withReviews) {
+                if (finalRestaurants.length < 6 && !usedIds.has(place.id)) {
+                    finalRestaurants.push(place);
+                    usedIds.add(place.id);
+                }
+            }
+
+            const remaining = data.filter(place => !usedIds.has(place.id));
+            while (finalRestaurants.length < SEGMENT_COUNT && remaining.length > 0) {
+                const randomIndex = Math.floor(Math.random() * remaining.length);
+                finalRestaurants.push(remaining.splice(randomIndex, 1)[0]);
+            }
+            
+            while (finalRestaurants.length < SEGMENT_COUNT) {
+                finalRestaurants.push({ place_name: '랜덤 식당', id: Math.random().toString() });
+            }
+
+            restaurants = finalRestaurants.slice(0, SEGMENT_COUNT);
+            statusMessage.textContent = '룰렛이 준비되었습니다! START 버튼을 누르세요.';
+            resetBtn.disabled = false;
+            startBtn.disabled = false;
+            saveContainer.classList.remove('hidden');
+            rouletteNameInput.value = '';
+            drawWheel();
+        }
+
+        function handleStart() {
+            if (isSpinning || restaurants.length < SEGMENT_COUNT) return;
+
+            isSpinning = true;
+            startBtn.disabled = true;
+            resetBtn.disabled = true;
+            saveContainer.classList.add('hidden');
+            canvas.classList.remove('blinking');
+            if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+
+            const randomSpins = Math.floor(Math.random() * 5) + 5;
+            const randomStopAngle = Math.random() * 360;
+            const totalRotation = randomSpins * 360 + randomStopAngle;
+
+            canvas.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.3, 1)';
+            canvas.style.transform = `rotate(${totalRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                resetBtn.disabled = false;
+                
+                const finalAngle = totalRotation % 360;
+                const segmentAngle = 360 / SEGMENT_COUNT;
+                const adjustedAngle = (360 - finalAngle + 90 + segmentAngle / 2) % 360;
+                winnerIndex = Math.floor(adjustedAngle / segmentAngle);
+
+                const winner = restaurants[winnerIndex];
+                statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${winner.place_name}</a>!`;
+                
+                startBlinking();
+            }, 5000);
+        }
+        
+        function startBlinking() {
+            let lastTime = 0;
+            let show = true;
+            function blink(currentTime) {
+                if (isSpinning) return;
+                if (currentTime - lastTime > 500) {
+                    lastTime = currentTime;
+                    show = !show;
+                    canvas.classList.toggle('blinking', show);
+                    drawWheel(); // Redraw to apply blinking effect
+                }
+                blinkAnimationId = requestAnimationFrame(blink);
+            }
+            blinkAnimationId = requestAnimationFrame(blink);
+        }
+
+        // --- Firebase Firestore 함수 ---
+        async function handleSave() {
+            if (!userId) {
+                statusMessage.textContent = "로그인이 필요합니다.";
+                return;
+            }
+            const name = rouletteNameInput.value.trim();
+            if (!name) {
+                statusMessage.textContent = "룰렛 이름을 입력해주세요.";
+                return;
+            }
+            if (restaurants.length < SEGMENT_COUNT) {
+                 statusMessage.textContent = "저장할 식당 목록이 없습니다.";
+                return;
+            }
+
+            try {
+                // 이 앱은 개인 데이터만 저장하므로 users 경로를 사용합니다.
+                const docRef = await addDoc(collection(db, "users", userId, "roulettes"), {
+                    name: name,
+                    restaurants: restaurants,
+                    createdAt: new Date()
+                });
+                console.log("룰렛 저장 성공:", docRef.id);
+                statusMessage.textContent = `'${name}' 룰렛이 저장되었습니다.`;
+                rouletteNameInput.value = '';
+                saveContainer.classList.add('hidden');
+            } catch (error) {
+                console.error("룰렛 저장 실패:", error);
+                statusMessage.textContent = "룰렛 저장에 실패했습니다.";
+            }
+        }
+
+        function loadSavedRoulettes() {
+            if (!userId) return;
+            const q = query(collection(db, "users", userId, "roulettes"));
+
+            onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) {
+                    savedRoulettesList.innerHTML = '<p class="text-center text-gray-500">저장된 룰렛이 없습니다.</p>';
+                    return;
+                }
+                
+                savedRoulettesList.innerHTML = '';
+                snapshot.forEach((doc) => {
+                    const roulette = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center p-2 border-b';
+                    div.innerHTML = `
+                        <span class="font-semibold">${roulette.name}</span>
+                        <div class="space-x-2">
+                            <button data-id="${doc.id}" class="load-btn bg-green-100 text-green-800 text-sm font-semibold px-2 py-1 rounded">불러오기</button>
+                            <button data-id="${doc.id}" class="delete-btn bg-red-100 text-red-800 text-sm font-semibold px-2 py-1 rounded">삭제</button>
+                        </div>
+                    `;
+                    savedRoulettesList.appendChild(div);
+                });
+
+                document.querySelectorAll('.load-btn').forEach(btn => btn.addEventListener('click', (e) => loadSpecificRoulette(e.target.dataset.id)));
+                document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => deleteSpecificRoulette(e.target.dataset.id)));
+            });
+        }
+
+        async function loadSpecificRoulette(docId) {
+            if (!userId) return;
+            try {
+                const docRef = doc(db, "users", userId, "roulettes", docId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const rouletteData = docSnap.data();
+                    resetState();
+                    restaurants = rouletteData.restaurants;
+                    statusMessage.textContent = `'${rouletteData.name}' 룰렛을 불러왔습니다.`;
+                    drawWheel();
+                    startBtn.disabled = false;
+                    resetBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error("룰렛 불러오기 실패:", error);
+            }
+        }
+        
+        async function deleteSpecificRoulette(docId) {
+            if (!userId) return;
+            // confirm()은 이 환경에서 작동하지 않을 수 있으므로, 바로 삭제 로직을 실행합니다.
+            // 실제 서비스에서는 커스텀 모달 창으로 확인 절차를 구현하는 것이 좋습니다.
+            try {
+                await deleteDoc(doc(db, "users", userId, "roulettes", docId));
+                console.log("룰렛 삭제 성공");
+            } catch (error) {
+                console.error("룰렛 삭제 실패:", error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>오늘 뭐 먹지? 룰렛 (DB 연동)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9ddcc83d3b7ed7f48495e2de9a0a4460&libraries=services"></script>
+    <!-- 1. 수정된 부분: &autoload=false 추가 -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9ddcc83d3b7ed7f48495e2de9a0a4460&libraries=services&autoload=false"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
         body {
@@ -81,13 +82,11 @@
             </button>
         </div>
         
-        <!-- 룰렛 저장 UI -->
         <div id="save-container" class="hidden flex justify-center items-center space-x-2 mb-4 p-2 bg-white rounded-lg shadow">
             <input type="text" id="roulette-name-input" placeholder="룰렛 이름 입력" class="border rounded px-2 py-1 flex-grow">
             <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-md">저장</button>
         </div>
 
-        <!-- 저장된 룰렛 목록 -->
         <div class="w-full bg-white rounded-lg shadow p-4">
             <h2 class="text-xl font-bold text-center mb-2">저장된 룰렛 목록</h2>
             <div id="saved-roulettes-list" class="h-40 overflow-y-auto custom-scrollbar">
@@ -97,12 +96,10 @@
     </div>
 
     <script type="module">
-        // --- Firebase 모듈 임포트 ---
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, setDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- UI 요소 및 전역 변수 ---
         const canvas = document.getElementById('rouletteCanvas');
         const ctx = canvas.getContext('2d');
         const resetBtn = document.getElementById('resetBtn');
@@ -122,10 +119,22 @@
 
         let db, auth, userId;
 
-        // --- Firebase 초기화 및 인증 ---
+        // 2. 수정된 부분: kakao.maps.load로 앱 초기화 로직을 감쌌습니다.
+        window.onload = () => {
+            const size = Math.min(window.innerWidth * 0.9, 450);
+            canvas.width = size;
+            canvas.height = size;
+            resetBtn.disabled = true;
+            drawWheel();
+            
+            // 카카오맵 SDK 로딩이 완료된 후, 앱을 초기화합니다.
+            kakao.maps.load(() => {
+                initializeFirebase();
+            });
+        };
+
         async function initializeFirebase() {
             try {
-                // 사용자가 제공한 Firebase 설정 정보로 교체된 부분입니다.
                 const firebaseConfig = {
                   apiKey: "AIzaSyCULXkDYqAfCtpN7PmQktYachfyB7P8dqk",
                   authDomain: "lunch-78f47.firebaseapp.com",
@@ -159,22 +168,10 @@
             }
         }
 
-        // --- 초기화 ---
-        window.onload = () => {
-            const size = Math.min(window.innerWidth * 0.9, 450);
-            canvas.width = size;
-            canvas.height = size;
-            resetBtn.disabled = true;
-            drawWheel();
-            initializeFirebase();
-        };
-
-        // --- 이벤트 리스너 ---
         resetBtn.addEventListener('click', handleReset);
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);
 
-        // --- 함수 ---
         function drawWheel() {
             const radius = canvas.width / 2;
             const segmentAngle = (2 * Math.PI) / SEGMENT_COUNT;
@@ -205,7 +202,7 @@
                 ctx.fillStyle = '#1f2937';
                 ctx.font = `bold ${radius * 0.08}px 'Noto Sans KR'`;
                 
-                const text = restaurants[i] ? restaurants[i].place_name : (restaurants.length > 0 ? '?' : 'Reset!');
+                const text = restaurants[i] ? restaurants[i].place_name : (restaurants.length > 0 ? '?' : '초기화!');
                 const textRadius = radius * 0.9;
                 
                 let displayText = text;
@@ -356,14 +353,13 @@
                     lastTime = currentTime;
                     show = !show;
                     canvas.classList.toggle('blinking', show);
-                    drawWheel(); // Redraw to apply blinking effect
+                    drawWheel();
                 }
                 blinkAnimationId = requestAnimationFrame(blink);
             }
             blinkAnimationId = requestAnimationFrame(blink);
         }
 
-        // --- Firebase Firestore 함수 ---
         async function handleSave() {
             if (!userId) {
                 statusMessage.textContent = "로그인이 필요합니다.";
@@ -380,7 +376,6 @@
             }
 
             try {
-                // 이 앱은 개인 데이터만 저장하므로 users 경로를 사용합니다.
                 const docRef = await addDoc(collection(db, "users", userId, "roulettes"), {
                     name: name,
                     restaurants: restaurants,
@@ -448,8 +443,6 @@
         
         async function deleteSpecificRoulette(docId) {
             if (!userId) return;
-            // confirm()은 이 환경에서 작동하지 않을 수 있으므로, 바로 삭제 로직을 실행합니다.
-            // 실제 서비스에서는 커스텀 모달 창으로 확인 절차를 구현하는 것이 좋습니다.
             try {
                 await deleteDoc(doc(db, "users", userId, "roulettes", docId));
                 console.log("룰렛 삭제 성공");

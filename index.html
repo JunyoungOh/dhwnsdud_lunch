@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>오늘 뭐 먹지? 룰렛 (DB 연동)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 1. 수정된 부분: &autoload=false 추가 -->
-    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9ddcc83d3b7ed7f48495e2de9a0a4460&libraries=services&autoload=false"></script>
+    <!-- 수정된 부분: &autoload=false 파라미터를 제거하여 스크립트를 동기적으로 로드합니다. -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9ddcc83d3b7ed7f48495e2de9a0a4460&libraries=services"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
         body {
@@ -119,18 +119,14 @@
 
         let db, auth, userId;
 
-        // 2. 수정된 부분: kakao.maps.load로 앱 초기화 로직을 감쌌습니다.
+        // 수정된 부분: kakao.maps.load() 래퍼를 제거하고 window.onload에서 직접 초기화를 호출합니다.
         window.onload = () => {
             const size = Math.min(window.innerWidth * 0.9, 450);
             canvas.width = size;
             canvas.height = size;
             resetBtn.disabled = true;
             drawWheel();
-            
-            // 카카오맵 SDK 로딩이 완료된 후, 앱을 초기화합니다.
-            kakao.maps.load(() => {
-                initializeFirebase();
-            });
+            initializeFirebase();
         };
 
         async function initializeFirebase() {

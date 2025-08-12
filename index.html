@@ -576,10 +576,8 @@
             }
         }
 
-        // --- 수정된 부분: Firestore 인덱스 오류를 해결하기 위해 클라이언트 측에서 정렬 ---
         function loadSharedRoulettes() {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            // orderBy를 제거하여 인덱스 없이 모든 문서를 가져옵니다.
             const q = query(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"));
             
             onSnapshot(q, (snapshot) => {
@@ -587,7 +585,6 @@
                 let roulettes = [];
                 snapshot.forEach(doc => {
                     const shared = doc.data();
-                    // 자동 삭제 로직
                     if (shared.dislikes >= 10 && shared.sharedAt?.toDate() < oneDayAgo) {
                         deleteDoc(doc.ref);
                     } else {
@@ -595,12 +592,9 @@
                     }
                 });
 
-                // 클라이언트(브라우저)에서 직접 정렬합니다.
                 roulettes.sort((a, b) => {
-                    // 1. 좋아요가 많은 순 (내림차순)
                     const likesDiff = (b.likes || 0) - (a.likes || 0);
                     if (likesDiff !== 0) return likesDiff;
-                    // 2. 좋아요가 같다면, 최신 순 (내림차순)
                     const dateB = b.sharedAt?.toDate() || 0;
                     const dateA = a.sharedAt?.toDate() || 0;
                     return dateB - dateA;
@@ -668,6 +662,3 @@
     </script>
 </body>
 </html>
-```
-
-이제 Firestore 인덱스 생성 없이도 '좋아요' 순서대로 룰렛이 정상적으로 정렬될 것입니다. 다른 궁금한 점이 있으시면 언제든지 말씀해주

@@ -113,15 +113,16 @@
 
         <!-- 자랑하기 게시판 (오른쪽) -->
         <div class="order-3 w-full bg-white p-4 rounded-lg shadow-lg">
-            <h2 class="text-xl font-bold text-center mb-4">👑 룰렛 자랑하기</h2>
-            <div id="shared-roulettes-list" class="h-[500px] overflow-y-auto custom-scrollbar"></div>
+            <h2 class="text-xl font-bold text-center mb-2">👑 룰렛 자랑하기</h2>
+            <input type="search" id="search-shared" placeholder="룰렛 이름, 지역명 검색..." class="w-full p-2 border rounded-md mb-4">
+            <div id="shared-roulettes-list" class="h-[460px] overflow-y-auto custom-scrollbar"></div>
         </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, query, orderBy, serverTimestamp, updateDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UI 요소 ---
         const canvas = document.getElementById('rouletteCanvas');
@@ -137,6 +138,7 @@
         const candidateListsWrapper = document.getElementById('candidate-lists-wrapper');
         const modeSelect = document.getElementById('mode-select');
         const sharedRoulettesList = document.getElementById('shared-roulettes-list');
+        const searchSharedInput = document.getElementById('search-shared');
         
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
@@ -147,6 +149,7 @@
         let blinkAnimationId;
         let db, auth, userId;
         let lastKnownCoords = null;
+        let allSharedRoulettes = [];
 
         // --- 초기화 ---
         window.onload = () => {
@@ -193,6 +196,7 @@
         resetBtn.addEventListener('click', handleReset);
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);
+        searchSharedInput.addEventListener('input', renderSharedRoulettes);
 
         // --- 렌더링 함수 ---
         function drawWheel() {
@@ -368,14 +372,13 @@
                         </li>`;
             };
 
-            if (titlePrefix) { // 적용하기로 불러온 경우
+            if (titlePrefix) {
                  placesForRoulette = data;
                  listHtml = `<div>
                                 <h3 class="text-lg font-semibold text-indigo-700 mb-2 border-b-2 border-indigo-200 pb-1">${titlePrefix}</h3>
                                 <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
                             </div>`;
-            } else { // Reset으로 새로 생성한 경우
-                // ... (기존 모드 선택 로직)
+            } else {
                  switch (mode) {
                     case 'rating': {
                         const topRated = [...data].sort((a,b) => (b.rating || 0) - (a.rating || 0));
@@ -470,7 +473,7 @@
             geocoder.coord2RegionCode(lastKnownCoords.lng, lastKnownCoords.lat, async (result, status) => {
                 let regionName = "알수없음";
                 if (status === kakao.maps.services.Status.OK) {
-                    const region = result.find(r => r.region_type === 'H'); // 행정동 기준
+                    const region = result.find(r => r.region_type === 'H');
                     if(region) regionName = region.address_name.split(' ').pop();
                 }
                 
@@ -564,36 +567,107 @@
                 await addDoc(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"), {
                     ...rouletteToShare,
                     sharedBy: userId,
-                    sharedAt: serverTimestamp()
+                    sharedAt: serverTimestamp(),
+                    likes: 0,
+                    dislikes: 0,
+                    voters: []
                 });
                 statusMessage.textContent = `'${rouletteToShare.name}' 룰렛을 자랑했습니다!`;
             }
         }
 
+        // --- 수정된 부분: Firestore 인덱스 오류를 해결하기 위해 클라이언트 측에서 정렬 ---
         function loadSharedRoulettes() {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const q = query(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"), orderBy("sharedAt", "desc"));
+            // orderBy를 제거하여 인덱스 없이 모든 문서를 가져옵니다.
+            const q = query(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"));
             
             onSnapshot(q, (snapshot) => {
-                sharedRoulettesList.innerHTML = snapshot.empty ? '<p class="text-center text-gray-500">아직 공유된 룰렛이 없어요.</p>' : '';
+                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                let roulettes = [];
                 snapshot.forEach(doc => {
                     const shared = doc.data();
-                    const div = document.createElement('div');
-                    div.className = 'p-2 border-b';
-                    div.innerHTML = `
-                        <p class="font-bold truncate" title="${shared.name}">${shared.name}</p>
-                        <ul class="text-sm text-gray-600 mt-1 pl-2">
-                            ${shared.restaurants.slice(0,3).map(r => `<li class="truncate">- ${r.place_name}</li>`).join('')}
-                            ${shared.restaurants.length > 3 ? '<li class="text-gray-400">... 등</li>' : ''}
-                        </ul>
-                        <button data-id="${doc.id}" class="apply-btn mt-2 w-full bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold py-1 rounded">적용하기</button>
-                    `;
-                    sharedRoulettesList.appendChild(div);
+                    // 자동 삭제 로직
+                    if (shared.dislikes >= 10 && shared.sharedAt?.toDate() < oneDayAgo) {
+                        deleteDoc(doc.ref);
+                    } else {
+                        roulettes.push({ id: doc.id, ...shared });
+                    }
                 });
 
-                document.querySelectorAll('.apply-btn').forEach(btn => btn.addEventListener('click', (e) => loadSpecificRoulette(e.target.dataset.id, 'public')));
+                // 클라이언트(브라우저)에서 직접 정렬합니다.
+                roulettes.sort((a, b) => {
+                    // 1. 좋아요가 많은 순 (내림차순)
+                    const likesDiff = (b.likes || 0) - (a.likes || 0);
+                    if (likesDiff !== 0) return likesDiff;
+                    // 2. 좋아요가 같다면, 최신 순 (내림차순)
+                    const dateB = b.sharedAt?.toDate() || 0;
+                    const dateA = a.sharedAt?.toDate() || 0;
+                    return dateB - dateA;
+                });
+
+                allSharedRoulettes = roulettes;
+                renderSharedRoulettes();
             });
+        }
+
+        function renderSharedRoulettes() {
+            const searchTerm = searchSharedInput.value.toLowerCase();
+            const filteredList = allSharedRoulettes.filter(shared => shared.name.toLowerCase().includes(searchTerm));
+
+            sharedRoulettesList.innerHTML = filteredList.length === 0 ? '<p class="text-center text-gray-500">일치하는 룰렛이 없어요.</p>' : '';
+            
+            filteredList.forEach(shared => {
+                const div = document.createElement('div');
+                div.className = 'p-3 border-b';
+                div.innerHTML = `
+                    <p class="font-bold truncate" title="${shared.name}">${shared.name}</p>
+                    <ul class="text-sm text-gray-600 mt-1 pl-2">
+                        ${shared.restaurants.slice(0,3).map(r => `<li class="truncate">- ${r.place_name}</li>`).join('')}
+                        ${shared.restaurants.length > 3 ? '<li class="text-gray-400">... 등</li>' : ''}
+                    </ul>
+                    <div class="flex items-center justify-between mt-2">
+                        <div class="flex items-center space-x-2">
+                            <button data-id="${shared.id}" data-vote="like" class="vote-btn flex items-center bg-gray-200 px-2 py-1 rounded-full text-xs hover:bg-blue-200">👍 <span class="ml-1 font-semibold">${shared.likes || 0}</span></button>
+                            <button data-id="${shared.id}" data-vote="dislike" class="vote-btn flex items-center bg-gray-200 px-2 py-1 rounded-full text-xs hover:bg-red-200">👎 <span class="ml-1 font-semibold">${shared.dislikes || 0}</span></button>
+                        </div>
+                        <button data-id="${shared.id}" class="apply-btn bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold py-1 px-3 rounded">적용하기</button>
+                    </div>
+                `;
+                sharedRoulettesList.appendChild(div);
+            });
+
+            document.querySelectorAll('.apply-btn').forEach(btn => btn.addEventListener('click', (e) => loadSpecificRoulette(e.target.dataset.id, 'public')));
+            document.querySelectorAll('.vote-btn').forEach(btn => btn.addEventListener('click', (e) => handleVote(e.currentTarget.dataset.id, e.currentTarget.dataset.vote)));
+        }
+
+        async function handleVote(docId, voteType) {
+            if (!userId) return;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const docRef = doc(db, "artifacts", appId, "public", "data", "shared-roulettes", docId);
+            
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const voters = docSnap.data().voters || [];
+                if (voters.includes(userId)) {
+                    statusMessage.textContent = "이미 투표하셨습니다.";
+                    return;
+                }
+
+                const updateData = {
+                    voters: arrayUnion(userId)
+                };
+                if (voteType === 'like') {
+                    updateData.likes = increment(1);
+                } else {
+                    updateData.dislikes = increment(1);
+                }
+                await updateDoc(docRef, updateData);
+            }
         }
     </script>
 </body>
 </html>
+```
+
+이제 Firestore 인덱스 생성 없이도 '좋아요' 순서대로 룰렛이 정상적으로 정렬될 것입니다. 다른 궁금한 점이 있으시면 언제든지 말씀해주

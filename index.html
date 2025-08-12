@@ -290,7 +290,12 @@
                 winnerIndex = Math.round(winningAngle / segmentAngle) % SEGMENT_COUNT;
 
                 const winner = restaurants[winnerIndex];
-                statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${winner.place_name}</a>!`;
+                
+                if (winner.id === 'reroll') {
+                    statusMessage.innerHTML = `아쉽네요! <span class="font-bold text-red-600">다시 한 번!</span>`;
+                } else {
+                    statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${winner.place_name}</a>!`;
+                }
                 
                 startBlinking();
             }, 5000);
@@ -329,7 +334,10 @@
             places.categorySearch('FD6', (result, status) => {
                 if (status === kakao.maps.services.Status.OK) {
                     processRestaurantData(result);
-                } else {
+                } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+                    processRestaurantData([]); // 검색 결과가 없을 때도 처리
+                }
+                else {
                     statusMessage.textContent = '주변 식당 정보를 가져오는데 실패했습니다.';
                     resetBtn.disabled = false;
                 }
@@ -337,18 +345,14 @@
         }
 
         function processRestaurantData(data) {
-            if (data.length < SEGMENT_COUNT) {
-                 statusMessage.textContent = `식당을 ${data.length}곳만 찾았어요. 룰렛을 채울 수 없습니다.`;
-                 resetBtn.disabled = false;
-                 return;
-            }
-            
             const mode = modeSelect.value;
             let placesForRoulette = [];
             let listHtml = '';
             
-            // --- 수정된 부분: 식당 이름에 링크를 추가하는 리스트 아이템 생성 함수 ---
             const createListItem = (place, type) => {
+                if (place.id === 'reroll') {
+                    return `<li class="text-gray-500">- 다시 한 번</li>`;
+                }
                 let additionalInfo = '';
                 if (type === 'rating' && place.rating > 0) {
                     additionalInfo = `<span class="text-sm font-bold text-yellow-500 ml-2">⭐ ${parseFloat(place.rating).toFixed(1)}</span>`;
@@ -358,33 +362,32 @@
                             ${additionalInfo}
                         </li>`;
             };
-            // -----------------------------------------------------------------
 
             switch (mode) {
                 case 'rating': {
-                    const top9 = [...data].sort((a,b) => (b.rating || 0) - (a.rating || 0)).slice(0, SEGMENT_COUNT);
-                    placesForRoulette = top9;
+                    const topRated = [...data].sort((a,b) => (b.rating || 0) - (a.rating || 0));
+                    placesForRoulette = topRated;
                     listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 Top 9</h3>
-                                    <ul class="space-y-2 text-gray-700">${top9.map(p => createListItem(p, 'rating')).join('')}</ul>
+                                    <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 순</h3>
+                                    <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
                                 </div>`;
                     break;
                 }
                 case 'review': {
-                    const top9 = data.filter(d => d.id).slice(0, SEGMENT_COUNT);
-                    placesForRoulette = top9;
+                    const topReviewed = data.filter(d => d.id);
+                    placesForRoulette = topReviewed;
                     listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳 Top 9</h3>
-                                    <ul class="space-y-2 text-gray-700">${top9.map(p => createListItem(p, 'review')).join('')}</ul>
+                                    <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳</h3>
+                                    <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'review')).join('')}</ul>
                                 </div>`;
                     break;
                 }
                 case 'random': {
-                    const top9 = [...data].sort(() => 0.5 - Math.random()).slice(0, SEGMENT_COUNT);
-                    placesForRoulette = top9;
+                    const randomPlaces = [...data].sort(() => 0.5 - Math.random());
+                    placesForRoulette = randomPlaces;
                     listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤 9곳</h3>
-                                    <ul class="space-y-2 text-gray-700">${top9.map(p => createListItem(p, 'random')).join('')}</ul>
+                                    <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤</h3>
+                                    <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'random')).join('')}</ul>
                                 </div>`;
                     break;
                 }
@@ -416,11 +419,13 @@
                                 </div>`;
                 }
             }
-
-            const allRemaining = data.filter(p => !placesForRoulette.find(pr => pr.id === p.id));
-            while (placesForRoulette.length < SEGMENT_COUNT && allRemaining.length > 0) {
-                 placesForRoulette.push(allRemaining.shift());
+            
+            // --- 수정된 부분: 9개 미만일 경우 '다시 한 번'으로 채우기 ---
+            const rerollOption = { place_name: '다시 한 번', id: 'reroll', place_url: '#' };
+            while (placesForRoulette.length < SEGMENT_COUNT) {
+                 placesForRoulette.push(rerollOption);
             }
+            // --------------------------------------------------------
 
             restaurants = placesForRoulette.slice(0, SEGMENT_COUNT);
             statusMessage.textContent = '룰렛이 준비되었습니다! START 버튼을 누르세요.';
@@ -444,8 +449,9 @@
                 statusMessage.textContent = "룰렛 이름을 입력해주세요.";
                 return;
             }
-            if (restaurants.length < SEGMENT_COUNT) {
-                 statusMessage.textContent = "저장할 식당 목록이 없습니다.";
+            // '다시 한 번'이 포함된 룰렛은 저장하지 않도록 함
+            if (restaurants.some(r => r.id === 'reroll')) {
+                statusMessage.textContent = "'다시 한 번'이 포함된 룰렛은 저장할 수 없습니다.";
                 return;
             }
 

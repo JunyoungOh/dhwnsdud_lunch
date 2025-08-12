@@ -103,9 +103,15 @@
                 </div>
             </div>
             
-            <div id="save-container" class="hidden flex justify-center items-center space-x-2 mb-4 p-2 bg-white rounded-lg shadow w-full max-w-md">
-                <input type="text" id="roulette-name-input" placeholder="룰렛 이름 입력" class="border rounded px-2 py-1 flex-grow">
-                <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-md">저장</button>
+            <!-- 수정된 부분: 저장 UI 구조 변경 및 설명 문구 추가 -->
+            <div id="save-container" class="hidden w-full max-w-md mb-4">
+                <div class="bg-white p-3 rounded-lg shadow">
+                    <div class="flex justify-center items-center space-x-2">
+                        <input type="text" id="roulette-name-input" placeholder="룰렛 이름 입력" class="border rounded px-2 py-1 flex-grow">
+                        <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-md">저장</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2 text-center">마음에 드는 룰렛이 나오면 소장해두고 계속 사용해보세요!</p>
+                </div>
             </div>
 
             <div class="w-full max-w-md bg-white rounded-lg shadow p-4">
@@ -420,12 +426,10 @@
                 }
             }
             
-            // --- 수정된 부분: 9개 미만일 경우 '다시 한 번'으로 채우기 ---
             const rerollOption = { place_name: '다시 한 번', id: 'reroll', place_url: '#' };
             while (placesForRoulette.length < SEGMENT_COUNT) {
                  placesForRoulette.push(rerollOption);
             }
-            // --------------------------------------------------------
 
             restaurants = placesForRoulette.slice(0, SEGMENT_COUNT);
             statusMessage.textContent = '룰렛이 준비되었습니다! START 버튼을 누르세요.';
@@ -449,7 +453,6 @@
                 statusMessage.textContent = "룰렛 이름을 입력해주세요.";
                 return;
             }
-            // '다시 한 번'이 포함된 룰렛은 저장하지 않도록 함
             if (restaurants.some(r => r.id === 'reroll')) {
                 statusMessage.textContent = "'다시 한 번'이 포함된 룰렛은 저장할 수 없습니다.";
                 return;

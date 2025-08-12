@@ -43,35 +43,32 @@
                 opacity: 0.3;
             }
         }
-        /* 스크롤바 스타일 */
         .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9; /* slate-100 */
+            background: #f1f5f9;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #94a3b8; /* slate-400 */
+            background: #94a3b8;
             border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #64748b; /* slate-500 */
+            background: #64748b;
         }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-    <main class="w-full max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+    <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         <!-- 후보 목록 (왼쪽) -->
-        <div id="restaurant-list-container" class="hidden md:block order-2 md:order-1 w-full bg-white p-4 rounded-lg shadow-lg">
+        <div id="restaurant-list-container" class="hidden lg:block order-2 lg:order-1 w-full bg-white p-4 rounded-lg shadow-lg">
             <h2 class="text-xl font-bold text-center mb-4">오늘의 후보</h2>
-            <div id="candidate-lists-wrapper" class="space-y-4">
-                <!-- JS로 내용이 채워집니다 -->
-            </div>
+            <div id="candidate-lists-wrapper" class="space-y-4"></div>
         </div>
 
-        <!-- 룰렛 (중앙/오른쪽) -->
-        <div class="md:col-span-2 order-1 md:order-2 flex flex-col items-center w-full">
+        <!-- 룰렛 (중앙) -->
+        <div class="lg:col-span-2 order-1 lg:order-2 flex flex-col items-center w-full">
             <div class="text-center mb-4">
                 <h1 class="text-4xl font-bold text-gray-800">오늘 뭐 먹지?</h1>
                 <p id="status-message" class="text-gray-600 mt-2 h-6">룰렛 모드를 선택하고 Reset 버튼을 누르세요!</p>
@@ -82,11 +79,10 @@
                 <canvas id="rouletteCanvas"></canvas>
             </div>
             
-            <!-- 컨트롤 패널 -->
             <div class="bg-white p-4 rounded-lg shadow-md w-full max-w-md mb-4">
                 <div class="flex items-center justify-between mb-4">
                     <label for="mode-select" class="font-semibold text-gray-700">룰렛 모드:</label>
-                    <select id="mode-select" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                    <select id="mode-select" class="rounded-md border-gray-300 shadow-sm">
                         <option value="mix" selected>기본 조합 (추천)</option>
                         <option value="rating">⭐ 평점 Top 9</option>
                         <option value="review">✍️ 리뷰 많은 곳 Top 9</option>
@@ -94,16 +90,11 @@
                     </select>
                 </div>
                 <div class="flex justify-center space-x-2">
-                    <button id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        Reset
-                    </button>
-                    <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                        START
-                    </button>
+                    <button id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">Reset</button>
+                    <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full shadow-lg" disabled>START</button>
                 </div>
             </div>
             
-            <!-- 수정된 부분: 저장 UI 구조 변경 및 설명 문구 추가 -->
             <div id="save-container" class="hidden w-full max-w-md mb-4">
                 <div class="bg-white p-3 rounded-lg shadow">
                     <div class="flex justify-center items-center space-x-2">
@@ -115,18 +106,22 @@
             </div>
 
             <div class="w-full max-w-md bg-white rounded-lg shadow p-4">
-                <h2 class="text-xl font-bold text-center mb-2">저장된 룰렛 목록</h2>
-                <div id="saved-roulettes-list" class="h-40 overflow-y-auto custom-scrollbar">
-                    <p class="text-center text-gray-500">저장된 룰렛이 없습니다.</p>
-                </div>
+                <h2 class="text-xl font-bold text-center mb-2">나의 룰렛 목록</h2>
+                <div id="saved-roulettes-list" class="h-40 overflow-y-auto custom-scrollbar"></div>
             </div>
+        </div>
+
+        <!-- 자랑하기 게시판 (오른쪽) -->
+        <div class="order-3 w-full bg-white p-4 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold text-center mb-4">👑 룰렛 자랑하기</h2>
+            <div id="shared-roulettes-list" class="h-[500px] overflow-y-auto custom-scrollbar"></div>
         </div>
     </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, setDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UI 요소 ---
         const canvas = document.getElementById('rouletteCanvas');
@@ -141,6 +136,7 @@
         const restaurantListContainer = document.getElementById('restaurant-list-container');
         const candidateListsWrapper = document.getElementById('candidate-lists-wrapper');
         const modeSelect = document.getElementById('mode-select');
+        const sharedRoulettesList = document.getElementById('shared-roulettes-list');
         
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
@@ -150,6 +146,7 @@
         let winnerIndex = -1;
         let blinkAnimationId;
         let db, auth, userId;
+        let lastKnownCoords = null;
 
         // --- 초기화 ---
         window.onload = () => {
@@ -180,6 +177,7 @@
                     if (user) {
                         userId = user.uid;
                         loadSavedRoulettes();
+                        loadSharedRoulettes();
                         resetBtn.disabled = false;
                     } else {
                         signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
@@ -325,8 +323,9 @@
 
         // --- 데이터 처리 함수 ---
         function onGeoSuccess(position) {
+            lastKnownCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
             statusMessage.textContent = '주변 식당 정보를 가져오는 중...';
-            fetchRestaurants(position.coords.latitude, position.coords.longitude);
+            fetchRestaurants(lastKnownCoords.lat, lastKnownCoords.lng);
         }
 
         function onGeoError(error) {
@@ -341,7 +340,7 @@
                 if (status === kakao.maps.services.Status.OK) {
                     processRestaurantData(result);
                 } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
-                    processRestaurantData([]); // 검색 결과가 없을 때도 처리
+                    processRestaurantData([]);
                 }
                 else {
                     statusMessage.textContent = '주변 식당 정보를 가져오는데 실패했습니다.';
@@ -350,7 +349,7 @@
             }, { location: new kakao.maps.LatLng(lat, lng), radius: 1000, size: 15 });
         }
 
-        function processRestaurantData(data) {
+        function processRestaurantData(data, titlePrefix = '') {
             const mode = modeSelect.value;
             let placesForRoulette = [];
             let listHtml = '';
@@ -369,60 +368,69 @@
                         </li>`;
             };
 
-            switch (mode) {
-                case 'rating': {
-                    const topRated = [...data].sort((a,b) => (b.rating || 0) - (a.rating || 0));
-                    placesForRoulette = topRated;
-                    listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 순</h3>
-                                    <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
-                                </div>`;
-                    break;
-                }
-                case 'review': {
-                    const topReviewed = data.filter(d => d.id);
-                    placesForRoulette = topReviewed;
-                    listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳</h3>
-                                    <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'review')).join('')}</ul>
-                                </div>`;
-                    break;
-                }
-                case 'random': {
-                    const randomPlaces = [...data].sort(() => 0.5 - Math.random());
-                    placesForRoulette = randomPlaces;
-                    listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤</h3>
-                                    <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'random')).join('')}</ul>
-                                </div>`;
-                    break;
-                }
-                default: { // mix
-                    const sortedByRating = [...data].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-                    const withReviews = data.filter(d => d.id);
-                    let usedIds = new Set();
-                    const topRatingPlaces = [], topReviewPlaces = [], randomPlaces = [];
-
-                    for (const place of sortedByRating) if (topRatingPlaces.length < 3 && !usedIds.has(place.id)) { topRatingPlaces.push(place); usedIds.add(place.id); }
-                    for (const place of withReviews) if (topReviewPlaces.length < 3 && !usedIds.has(place.id)) { topReviewPlaces.push(place); usedIds.add(place.id); }
-                    const remaining = data.filter(place => !usedIds.has(place.id));
-                    while (randomPlaces.length < 3 && remaining.length > 0) {
-                        const randomPlace = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
-                        randomPlaces.push(randomPlace); usedIds.add(randomPlace.id);
+            if (titlePrefix) { // 적용하기로 불러온 경우
+                 placesForRoulette = data;
+                 listHtml = `<div>
+                                <h3 class="text-lg font-semibold text-indigo-700 mb-2 border-b-2 border-indigo-200 pb-1">${titlePrefix}</h3>
+                                <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
+                            </div>`;
+            } else { // Reset으로 새로 생성한 경우
+                // ... (기존 모드 선택 로직)
+                 switch (mode) {
+                    case 'rating': {
+                        const topRated = [...data].sort((a,b) => (b.rating || 0) - (a.rating || 0));
+                        placesForRoulette = topRated;
+                        listHtml = `<div>
+                                        <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 순</h3>
+                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
+                                    </div>`;
+                        break;
                     }
-                    placesForRoulette = [...topRatingPlaces, ...topReviewPlaces, ...randomPlaces];
-                    listHtml = `<div>
-                                    <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 Top 3</h3>
-                                    <ul class="space-y-2 text-gray-700">${topRatingPlaces.map(p => createListItem(p, 'rating')).join('')}</ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳 Top 3</h3>
-                                    <ul class="space-y-2 text-gray-700">${topReviewPlaces.map(p => createListItem(p, 'review')).join('')}</ul>
-                                </div>
-                                <div>
-                                    <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤 추천</h3>
-                                    <ul class="space-y-2 text-gray-700">${randomPlaces.map(p => createListItem(p, 'random')).join('')}</ul>
-                                </div>`;
+                    case 'review': {
+                        const topReviewed = data.filter(d => d.id);
+                        placesForRoulette = topReviewed;
+                        listHtml = `<div>
+                                        <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳</h3>
+                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'review')).join('')}</ul>
+                                    </div>`;
+                        break;
+                    }
+                    case 'random': {
+                        const randomPlaces = [...data].sort(() => 0.5 - Math.random());
+                        placesForRoulette = randomPlaces;
+                        listHtml = `<div>
+                                        <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤</h3>
+                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'random')).join('')}</ul>
+                                    </div>`;
+                        break;
+                    }
+                    default: { // mix
+                        const sortedByRating = [...data].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+                        const withReviews = data.filter(d => d.id);
+                        let usedIds = new Set();
+                        const topRatingPlaces = [], topReviewPlaces = [], randomPlaces = [];
+
+                        for (const place of sortedByRating) if (topRatingPlaces.length < 3 && !usedIds.has(place.id)) { topRatingPlaces.push(place); usedIds.add(place.id); }
+                        for (const place of withReviews) if (topReviewPlaces.length < 3 && !usedIds.has(place.id)) { topReviewPlaces.push(place); usedIds.add(place.id); }
+                        const remaining = data.filter(place => !usedIds.has(place.id));
+                        while (randomPlaces.length < 3 && remaining.length > 0) {
+                            const randomPlace = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
+                            randomPlaces.push(randomPlace); usedIds.add(randomPlace.id);
+                        }
+                        placesForRoulette = [...topRatingPlaces, ...topReviewPlaces, ...randomPlaces];
+                        listHtml = `<div>
+                                        <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 Top 3</h3>
+                                        <ul class="space-y-2 text-gray-700">${topRatingPlaces.map(p => createListItem(p, 'rating')).join('')}</ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳 Top 3</h3>
+                                        <ul class="space-y-2 text-gray-700">${topReviewPlaces.map(p => createListItem(p, 'review')).join('')}</ul>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤 추천</h3>
+                                        <ul class="space-y-2 text-gray-700">${randomPlaces.map(p => createListItem(p, 'random')).join('')}</ul>
+                                    </div>`;
+                    }
                 }
             }
             
@@ -444,8 +452,8 @@
 
         // --- Firebase Firestore 함수 ---
         async function handleSave() {
-            if (!userId) {
-                statusMessage.textContent = "로그인이 필요합니다.";
+            if (!userId || !lastKnownCoords) {
+                statusMessage.textContent = "위치 정보가 필요합니다.";
                 return;
             }
             const name = rouletteNameInput.value.trim();
@@ -458,66 +466,81 @@
                 return;
             }
 
-            try {
-                await addDoc(collection(db, "users", userId, "roulettes"), {
-                    name: name,
-                    restaurants: restaurants,
-                    createdAt: new Date()
-                });
-                statusMessage.textContent = `'${name}' 룰렛이 저장되었습니다.`;
-                rouletteNameInput.value = '';
-                saveContainer.classList.add('hidden');
-            } catch (error) {
-                console.error("룰렛 저장 실패:", error);
-                statusMessage.textContent = "룰렛 저장에 실패했습니다.";
-            }
+            const geocoder = new kakao.maps.services.Geocoder();
+            geocoder.coord2RegionCode(lastKnownCoords.lng, lastKnownCoords.lat, async (result, status) => {
+                let regionName = "알수없음";
+                if (status === kakao.maps.services.Status.OK) {
+                    const region = result.find(r => r.region_type === 'H'); // 행정동 기준
+                    if(region) regionName = region.address_name.split(' ').pop();
+                }
+                
+                const finalName = `[${regionName}] ${name}`;
+                
+                try {
+                    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    await addDoc(collection(db, "artifacts", appId, "users", userId, "roulettes"), {
+                        name: finalName,
+                        restaurants: restaurants,
+                        createdAt: serverTimestamp()
+                    });
+                    statusMessage.textContent = `'${finalName}' 룰렛이 저장되었습니다.`;
+                    rouletteNameInput.value = '';
+                    saveContainer.classList.add('hidden');
+                } catch (error) {
+                    console.error("룰렛 저장 실패:", error);
+                    statusMessage.textContent = "룰렛 저장에 실패했습니다.";
+                }
+            });
         }
 
         function loadSavedRoulettes() {
             if (!userId) return;
-            const q = query(collection(db, "users", userId, "roulettes"));
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const q = query(collection(db, "artifacts", appId, "users", userId, "roulettes"), orderBy("createdAt", "desc"));
 
             onSnapshot(q, (snapshot) => {
-                if (snapshot.empty) {
-                    savedRoulettesList.innerHTML = '<p class="text-center text-gray-500">저장된 룰렛이 없습니다.</p>';
-                    return;
-                }
-                
-                savedRoulettesList.innerHTML = '';
+                savedRoulettesList.innerHTML = snapshot.empty ? '<p class="text-center text-gray-500">저장된 룰렛이 없습니다.</p>' : '';
                 snapshot.forEach((doc) => {
                     const roulette = doc.data();
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-2 border-b';
                     div.innerHTML = `
-                        <span class="font-semibold">${roulette.name}</span>
-                        <div class="space-x-2">
-                            <button data-id="${doc.id}" class="load-btn bg-green-100 text-green-800 text-sm font-semibold px-2 py-1 rounded">불러오기</button>
-                            <button data-id="${doc.id}" class="delete-btn bg-red-100 text-red-800 text-sm font-semibold px-2 py-1 rounded">삭제</button>
+                        <span class="font-semibold truncate" title="${roulette.name}">${roulette.name}</span>
+                        <div class="flex-shrink-0 space-x-1">
+                            <button data-id="${doc.id}" class="load-btn bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">불러오기</button>
+                            <button data-id="${doc.id}" class="share-btn bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded">자랑하기</button>
+                            <button data-id="${doc.id}" class="delete-btn bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded">삭제</button>
                         </div>
                     `;
                     savedRoulettesList.appendChild(div);
                 });
 
-                document.querySelectorAll('.load-btn').forEach(btn => btn.addEventListener('click', (e) => loadSpecificRoulette(e.target.dataset.id)));
+                document.querySelectorAll('.load-btn').forEach(btn => btn.addEventListener('click', (e) => loadSpecificRoulette(e.target.dataset.id, 'private')));
+                document.querySelectorAll('.share-btn').forEach(btn => btn.addEventListener('click', (e) => handleShare(e.target.dataset.id)));
                 document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', (e) => deleteSpecificRoulette(e.target.dataset.id)));
             });
         }
 
-        async function loadSpecificRoulette(docId) {
+        async function loadSpecificRoulette(docId, type) {
             if (!userId) return;
             try {
-                const docRef = doc(db, "users", userId, "roulettes", docId);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const collectionPath = type === 'private' 
+                    ? ["artifacts", appId, "users", userId, "roulettes"] 
+                    : ["artifacts", appId, "public", "data", "shared-roulettes"];
+                
+                const docRef = doc(db, ...collectionPath, docId);
                 const docSnap = await getDoc(docRef);
 
                 if (docSnap.exists()) {
                     const rouletteData = docSnap.data();
                     resetState();
                     restaurants = rouletteData.restaurants;
-                    statusMessage.textContent = `'${rouletteData.name}' 룰렛을 불러왔습니다.`;
+                    statusMessage.textContent = `'${rouletteData.name}' 룰렛을 적용했습니다.`;
+                    processRestaurantData(restaurants, rouletteData.name);
                     drawWheel();
                     startBtn.disabled = false;
                     resetBtn.disabled = false;
-                    restaurantListContainer.classList.add('hidden');
                 }
             } catch (error) {
                 console.error("룰렛 불러오기 실패:", error);
@@ -526,11 +549,50 @@
         
         async function deleteSpecificRoulette(docId) {
             if (!userId) return;
-            try {
-                await deleteDoc(doc(db, "users", userId, "roulettes", docId));
-            } catch (error) {
-                console.error("룰렛 삭제 실패:", error);
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            await deleteDoc(doc(db, "artifacts", appId, "users", userId, "roulettes", docId));
+        }
+
+        async function handleShare(docId) {
+            if (!userId) return;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const docRef = doc(db, "artifacts", appId, "users", userId, "roulettes", docId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                const rouletteToShare = docSnap.data();
+                await addDoc(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"), {
+                    ...rouletteToShare,
+                    sharedBy: userId,
+                    sharedAt: serverTimestamp()
+                });
+                statusMessage.textContent = `'${rouletteToShare.name}' 룰렛을 자랑했습니다!`;
             }
+        }
+
+        function loadSharedRoulettes() {
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const q = query(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"), orderBy("sharedAt", "desc"));
+            
+            onSnapshot(q, (snapshot) => {
+                sharedRoulettesList.innerHTML = snapshot.empty ? '<p class="text-center text-gray-500">아직 공유된 룰렛이 없어요.</p>' : '';
+                snapshot.forEach(doc => {
+                    const shared = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'p-2 border-b';
+                    div.innerHTML = `
+                        <p class="font-bold truncate" title="${shared.name}">${shared.name}</p>
+                        <ul class="text-sm text-gray-600 mt-1 pl-2">
+                            ${shared.restaurants.slice(0,3).map(r => `<li class="truncate">- ${r.place_name}</li>`).join('')}
+                            ${shared.restaurants.length > 3 ? '<li class="text-gray-400">... 등</li>' : ''}
+                        </ul>
+                        <button data-id="${doc.id}" class="apply-btn mt-2 w-full bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold py-1 rounded">적용하기</button>
+                    `;
+                    sharedRoulettesList.appendChild(div);
+                });
+
+                document.querySelectorAll('.apply-btn').forEach(btn => btn.addEventListener('click', (e) => loadSpecificRoulette(e.target.dataset.id, 'public')));
+            });
         }
     </script>
 </body>

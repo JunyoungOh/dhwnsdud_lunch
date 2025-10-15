@@ -485,6 +485,17 @@
             updateTeamUIState();
 
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            try {
+                const appDocRef = doc(db, "artifacts", appId);
+                await setDoc(appDocRef, {
+                    initializedAt: serverTimestamp()
+                }, { merge: true });
+            } catch (error) {
+                console.error('팀 베이스 문서 준비 실패:', error);
+                throw error;
+            }
+
             teamDocRef = doc(db, "artifacts", appId, "team-rooms", code);
 
             try {

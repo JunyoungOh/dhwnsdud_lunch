@@ -148,6 +148,19 @@
                 <div id="saved-roulettes-list" class="h-40 overflow-y-auto custom-scrollbar"></div>
             </div>
 
+            <!-- 팀플레이 섹션 -->
+            <div id="team-card" class="w-full max-w-md bg-white rounded-lg shadow p-4 mt-6">
+                <h2 class="text-xl font-bold text-center mb-2">🤝 팀플레이</h2>
+                <p class="text-xs text-gray-500 text-center mb-3">같은 엑세스 코드로 접속하면 하나의 룰렛을 함께 채울 수 있어요.</p>
+                <div class="flex flex-col sm:flex-row gap-2 mb-3">
+                    <input id="team-access-input" type="text" placeholder="엑세스 코드 (영문/숫자)" class="border rounded px-3 py-2 text-sm flex-1">
+                    <button id="team-join-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-md">참여하기</button>
+                    <button id="team-leave-btn" class="hidden bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-md">나가기</button>
+                </div>
+                <p id="team-status" class="text-xs text-center text-slate-500 mb-3">엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.</p>
+                <div id="team-slots-container" class="space-y-2 hidden"></div>
+            </div>
+
             <!-- 직접 차트 만들기 섹션 -->
             <div class="w-full max-w-md bg-white rounded-lg shadow p-4 mt-6">
                 <h2 class="text-xl font-bold text-center mb-2">📝 직접 차트 만들기</h2>
@@ -185,7 +198,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, deleteDoc, query, orderBy, serverTimestamp, updateDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, updateDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UI 요소 ---
         const canvas = document.getElementById('rouletteCanvas');
@@ -215,6 +228,11 @@
         const winnerCallBtn = document.getElementById('winner-call-btn');
         const winnerRerollBtn = document.getElementById('winner-reroll');
         const winnerTag = document.getElementById('winner-tag');
+        const teamAccessInput = document.getElementById('team-access-input');
+        const teamJoinBtn = document.getElementById('team-join-btn');
+        const teamLeaveBtn = document.getElementById('team-leave-btn');
+        const teamStatus = document.getElementById('team-status');
+        const teamSlotsContainer = document.getElementById('team-slots-container');
         
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
@@ -226,7 +244,14 @@
         let db, auth, userId;
         let lastKnownCoords = null;
         let allSharedRoulettes = [];
-
+        let teamMode = false;
+        let teamCode = '';
+        let teamDocRef = null;
+        let teamUnsubscribe = null;
+        let teamSlots = Array.from({ length: SEGMENT_COUNT }, () => '');
+        let lastTeamSpinTrigger = '';
+        let teamSnapshotInitialized = false;
+        
         // --- 초기화 ---
         window.onload = () => {
             const size = Math.min(window.innerWidth * 0.9, 450);
@@ -245,6 +270,21 @@
         const textEscapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
         function safeText(text = '') {
             return String(text).replace(/[&<>"']/g, char => textEscapes[char] || char);
+        }
+
+        function updateStartButtonState() {
+            if (teamMode) {
+                const allFilled = teamSlots.every(slot => typeof slot === 'string' && slot.trim() !== '');
+                startBtn.disabled = isSpinning || !allFilled;
+                resetBtn.disabled = isSpinning;
+            } else {
+                startBtn.disabled = isSpinning || restaurants.length < SEGMENT_COUNT;
+                resetBtn.disabled = isSpinning;
+            }
+        }
+
+        function sanitizeAccessCode(raw = '') {
+            return raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 12);
         }
 
         async function initializeFirebase() {
@@ -278,13 +318,259 @@
             }
         }
 
+        function updateTeamUIState() {
+            if (teamMode) {
+                teamJoinBtn.classList.add('hidden');
+                teamLeaveBtn.classList.remove('hidden');
+                teamSlotsContainer.classList.remove('hidden');
+                teamAccessInput.value = teamCode;
+            } else {
+                teamJoinBtn.classList.remove('hidden');
+                teamLeaveBtn.classList.add('hidden');
+                teamSlotsContainer.classList.add('hidden');
+                teamAccessInput.value = '';
+                teamStatus.textContent = '엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.';
+            }
+        }
+
+        function createTeamEntry(index, text) {
+            const raw = typeof text === 'string' ? text : '';
+            const display = raw.trim() === '' ? `칸 ${index + 1}` : raw;
+            return {
+                id: `team-${index}`,
+                place_name: display,
+                rawText: raw,
+                place_url: '#',
+                address_name: '',
+                road_address_name: '',
+                phone: '',
+                distance: 0,
+                isTeamEntry: true
+            };
+        }
+
+        function updateTeamSlotsUI(slots = []) {
+            if (!teamMode) return;
+            teamSlotsContainer.innerHTML = '';
+            slots.forEach((slot, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2';
+
+                const label = document.createElement('span');
+                label.className = 'w-6 text-xs font-semibold text-slate-500 text-right';
+                label.textContent = `${index + 1}.`;
+
+                const input = document.createElement('input');
+                input.className = 'team-slot-input border rounded px-2 py-1 text-sm flex-1';
+                input.value = slot || '';
+                input.setAttribute('data-index', index);
+
+                const button = document.createElement('button');
+                button.className = 'team-slot-save bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-md flex-shrink-0';
+                button.textContent = '저장';
+
+                button.addEventListener('click', () => saveTeamSlot(index, input.value));
+                input.addEventListener('keyup', (event) => {
+                    if (event.key === 'Enter') {
+                        saveTeamSlot(index, input.value);
+                    }
+                });
+
+                row.appendChild(label);
+                row.appendChild(input);
+                row.appendChild(button);
+                teamSlotsContainer.appendChild(row);
+            });
+        }
+
+        function applyTeamSlotsToRestaurants(slots = []) {
+            if (!teamMode) return;
+            teamSlots = Array.from({ length: SEGMENT_COUNT }, (_, idx) => (slots[idx] || ''));
+            restaurants = teamSlots.map((slot, index) => createTeamEntry(index, slot));
+            candidateListsWrapper.innerHTML = '';
+            restaurantListContainer.classList.add('hidden');
+            saveContainer.classList.add('hidden');
+            drawWheel();
+            updateTeamSlotsUI(teamSlots);
+
+            const filledCount = teamSlots.filter(slot => slot.trim() !== '').length;
+            if (filledCount === SEGMENT_COUNT) {
+                teamStatus.textContent = '모든 칸이 채워졌어요! 이제 START 버튼으로 함께 돌려보세요.';
+                if (winnerIndex === -1 && !isSpinning) {
+                    statusMessage.textContent = '팀 룰렛이 준비되었습니다! START 버튼을 누르면 모두가 동시에 볼 수 있어요.';
+                }
+            } else {
+                teamStatus.textContent = `${filledCount}/${SEGMENT_COUNT}칸 채워졌어요. 모두 채우면 START 버튼이 활성화됩니다.`;
+                if (winnerIndex === -1 && !isSpinning) {
+                    statusMessage.textContent = '팀 룰렛을 채우는 중이에요. 팀원들과 함께 각 칸을 작성해 주세요.';
+                }
+            }
+            updateStartButtonState();
+        }
+
+        async function saveTeamSlot(index, value) {
+            if (!teamMode || !teamDocRef) return;
+            const trimmed = (value || '').trim();
+            try {
+                await updateDoc(teamDocRef, {
+                    [`slots.${index}`]: trimmed,
+                    updatedAt: serverTimestamp(),
+                    lastUpdatedBy: userId || null
+                });
+            } catch (error) {
+                console.error('팀 슬롯 업데이트 실패:', error);
+                statusMessage.textContent = '슬롯을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+            }
+        }
+
+        async function clearTeamSlots() {
+            if (!teamMode || !teamDocRef) return;
+            try {
+                await setDoc(teamDocRef, {
+                    slots: Array.from({ length: SEGMENT_COUNT }, () => '')
+                }, { merge: true });
+                winnerIndex = -1;
+                canvas.classList.remove('blinking');
+                drawWheel();
+                statusMessage.textContent = '팀 룰렛을 초기화했습니다. 다시 내용을 채워주세요.';
+            } catch (error) {
+                console.error('팀 룰렛 초기화 실패:', error);
+                statusMessage.textContent = '팀 룰렛 초기화에 실패했습니다.';
+            }
+        }
+
+        async function joinTeamRoom() {
+            if (!db) {
+                statusMessage.textContent = '앱이 준비되는 중입니다. 잠시 후 다시 시도해 주세요.';
+                return;
+            }
+            const sanitized = sanitizeAccessCode(teamAccessInput.value.trim());
+            if (!sanitized) {
+                teamStatus.textContent = '영문과 숫자로 이루어진 엑세스 코드를 입력해 주세요.';
+                teamAccessInput.focus();
+                return;
+            }
+            if (teamMode && sanitized === teamCode) {
+                teamStatus.textContent = `이미 '${teamCode}' 팀에 참여 중입니다.`;
+                return;
+            }
+
+            teamJoinBtn.disabled = true;
+            teamJoinBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            try {
+                await enterTeamMode(sanitized);
+            } catch (error) {
+                console.error('팀플레이 입장 실패:', error);
+                statusMessage.textContent = '팀에 참여하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+            } finally {
+                teamJoinBtn.disabled = false;
+                teamJoinBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
+        }
+
+        async function enterTeamMode(code) {
+            if (!db) return;
+            if (teamUnsubscribe) {
+                teamUnsubscribe();
+                teamUnsubscribe = null;
+            }
+
+            resetState(true);
+            canvas.classList.remove('blinking');
+            winnerIndex = -1;
+
+            teamMode = true;
+            teamCode = code;
+            teamAccessInput.value = code;
+            updateTeamUIState();
+
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            teamDocRef = doc(db, "artifacts", appId, "team-rooms", code);
+
+            try {
+                const docSnap = await getDoc(teamDocRef);
+                if (!docSnap.exists()) {
+                    await setDoc(teamDocRef, {
+                        slots: Array.from({ length: SEGMENT_COUNT }, () => ''),
+                        createdAt: serverTimestamp()
+                    });
+                }
+            } catch (error) {
+                console.error('팀 문서 준비 실패:', error);
+                teamMode = false;
+                teamDocRef = null;
+                updateTeamUIState();
+                throw error;
+            }
+
+            lastTeamSpinTrigger = '';
+            teamSnapshotInitialized = false;
+            teamUnsubscribe = onSnapshot(teamDocRef, handleTeamSnapshot);
+            statusMessage.textContent = `팀 룰렛 '${code}'에 참여했어요. 각 칸을 채워주세요.`;
+        }
+
+        function handleTeamSnapshot(docSnap) {
+            if (!docSnap.exists()) return;
+            const data = docSnap.data() || {};
+            const slots = Array.isArray(data.slots) ? data.slots : [];
+            applyTeamSlotsToRestaurants(slots);
+
+            if (data.spin && data.spin.triggerId) {
+                if (!teamSnapshotInitialized) {
+                    lastTeamSpinTrigger = data.spin.triggerId;
+                } else if (data.spin.triggerId !== lastTeamSpinTrigger) {
+                    lastTeamSpinTrigger = data.spin.triggerId;
+                    triggerTeamSpinFromSnapshot(data.spin);
+                }
+            }
+            teamSnapshotInitialized = true;
+        }
+
+        function triggerTeamSpinFromSnapshot(spinState = {}) {
+            const rotation = Number(spinState.totalRotation) || 0;
+            const targetIndex = typeof spinState.winnerIndex === 'number'
+                ? spinState.winnerIndex
+                : calculateWinnerIndex(rotation);
+            animateSpin(rotation, targetIndex, { triggeredByTeam: true });
+        }
+
+        function leaveTeamMode() {
+            if (teamUnsubscribe) {
+                teamUnsubscribe();
+                teamUnsubscribe = null;
+            }
+            teamMode = false;
+            teamCode = '';
+            teamDocRef = null;
+            teamSlots = Array.from({ length: SEGMENT_COUNT }, () => '');
+            lastTeamSpinTrigger = '';
+            teamSnapshotInitialized = false;
+            winnerIndex = -1;
+            canvas.classList.remove('blinking');
+            updateTeamUIState();
+            resetState();
+            attemptAutoDiscovery();
+            statusMessage.textContent = '팀플레이 모드에서 나왔어요. 주변 맛집을 다시 찾는 중입니다.';
+        }
+
         // --- 이벤트 리스너 ---
         resetBtn.addEventListener('click', () => handleReset());
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);
         searchSharedInput.addEventListener('input', renderSharedRoulettes);
         applyCustomBtn.addEventListener('click', handleApplyCustomChart);
+        teamJoinBtn.addEventListener('click', joinTeamRoom);
+        teamLeaveBtn.addEventListener('click', () => leaveTeamMode());
+        teamAccessInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                joinTeamRoom();
+            }
+        });
         applyManualLocationBtn.addEventListener('click', () => {
+            if (teamMode) {
+                statusMessage.textContent = '팀플레이 모드에서는 주변 식당 불러오기를 사용할 수 없어요.';
+                return;
+            }
             const value = manualLocationSelect.value;
             if (!value) {
                 statusMessage.textContent = '동네를 선택해 주세요.';
@@ -352,6 +638,11 @@
         // --- 상태 관리 함수 ---
         function handleReset(options = {}) {
             if (isSpinning) return;
+            if (teamMode) {
+                resetBtn.disabled = true;
+                clearTeamSlots().finally(() => updateStartButtonState());
+                return;
+            }
             const { silent = false } = options;
             resetState(silent);
             if (!silent) {
@@ -383,53 +674,107 @@
             if (!keepStatus) {
                 statusMessage.textContent = '주변 맛집을 모으는 중이에요...';
             }
+            updateStartButtonState();
         }
 
-        function handleStart() {
-            if (isSpinning || restaurants.length < SEGMENT_COUNT) return;
+        function calculateWinnerIndex(totalRotation) {
+            const normalized = ((totalRotation % 360) + 360) % 360;
+            const segmentAngle = 360 / SEGMENT_COUNT;
+            const winningAngle = (270 - normalized + 360) % 360;
+            return Math.round(winningAngle / segmentAngle) % SEGMENT_COUNT;
+        }
 
+        function animateSpin(totalRotation, forcedIndex = null) {
             isSpinning = true;
-            startBtn.disabled = true;
-            resetBtn.disabled = true;
             saveContainer.classList.add('hidden');
             canvas.classList.remove('blinking');
             if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
             winnerCard.classList.add('hidden');
-
-            const randomSpins = Math.floor(Math.random() * 5) + 5;
-            const randomStopAngle = Math.random() * 360;
-            const totalRotation = randomSpins * 360 + randomStopAngle;
+            updateStartButtonState();
 
             canvas.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.3, 1)';
             canvas.style.transform = `rotate(${totalRotation}deg)`;
 
             setTimeout(() => {
                 isSpinning = false;
-                resetBtn.disabled = false;
-                
-                const finalAngle = totalRotation % 360;
-                const segmentAngle = 360 / SEGMENT_COUNT;
-                const winningAngle = (270 - finalAngle + 360) % 360;
-                winnerIndex = Math.round(winningAngle / segmentAngle) % SEGMENT_COUNT;
-
+                const targetIndex = typeof forcedIndex === 'number' ? forcedIndex : calculateWinnerIndex(totalRotation);
+                winnerIndex = targetIndex;
                 const winner = restaurants[winnerIndex];
-                
-                if (winner.id === 'reroll') {
+                updateStartButtonState();
+
+                if (!winner || (winner.isTeamEntry && (winner.rawText || '').trim() === '')) {
+                    statusMessage.textContent = '아직 비어 있는 칸에 멈췄어요. 내용을 채워볼까요?';
+                    winnerCard.classList.add('hidden');
+                    startBlinking();
+                    return;
+                }
+
+                if (!teamMode && winner.id === 'reroll') {
                     statusMessage.innerHTML = `아쉽네요! <span class="font-bold text-red-600">다시 한 번!</span>`;
                     winnerCard.classList.add('hidden');
-                    startBtn.disabled = false;
-                    resetBtn.disabled = false;
+                    startBlinking();
+                    return;
+                }
+
+                if (teamMode && winner.isTeamEntry) {
+                    const displayName = safeText((winner.rawText || winner.place_name));
+                    statusMessage.innerHTML = `팀 룰렛 결과는 <span class="font-bold text-emerald-600">${displayName}</span>!`;
                 } else {
                     statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${safeText(winner.place_name)}</a>!`;
-                    populateWinnerCard(winner);
-                    winnerCard.classList.remove('hidden');
-                    startBtn.disabled = false;
-                    resetBtn.disabled = false;
                 }
-                
+
+                populateWinnerCard(winner);
+                winnerCard.classList.remove('hidden');         
                 startBlinking();
             }, 5000);
         }
+
+        function handleStart() {
+            if (isSpinning) return;
+
+            if (teamMode) {
+                if (!teamDocRef) {
+                    statusMessage.textContent = '팀 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.';
+                    return;
+                }
+                const allFilled = teamSlots.every(slot => slot.trim() !== '');
+                if (!allFilled) {
+                    statusMessage.textContent = '모든 칸을 채워야 룰렛을 돌릴 수 있어요!';
+                    return;
+                }
+                if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+                canvas.classList.remove('blinking');
+                winnerCard.classList.add('hidden');
+                isSpinning = true;
+                updateStartButtonState();
+                const randomSpins = Math.floor(Math.random() * 5) + 5;
+                const randomStopAngle = Math.random() * 360;
+                const totalRotation = randomSpins * 360 + randomStopAngle;
+                const winnerIdx = calculateWinnerIndex(totalRotation);
+                const spinPayload = {
+                    triggerId: `${userId || 'guest'}-${Date.now()}`,
+                    totalRotation,
+                    winnerIndex: winnerIdx,
+                    initiatedAt: Date.now(),
+                    initiator: userId || null
+                };
+                updateDoc(teamDocRef, { spin: spinPayload }).catch(error => {
+                    console.error('팀 룰렛 회전 정보 업데이트 실패:', error);
+                    statusMessage.textContent = '룰렛을 돌리지 못했어요. 다시 시도해 주세요.';
+                    isSpinning = false;
+                    updateStartButtonState();
+                });
+                return;
+            }
+
+            if (restaurants.length < SEGMENT_COUNT) return;
+
+            const randomSpins = Math.floor(Math.random() * 5) + 5;
+            const randomStopAngle = Math.random() * 360;
+            const totalRotation = randomSpins * 360 + randomStopAngle;
+            const winnerIdx = calculateWinnerIndex(totalRotation);
+            animateSpin(totalRotation, winnerIdx);
+        }   
         
         function startBlinking() {
             let lastTime = 0;
@@ -478,6 +823,7 @@
         }
 
         function processRestaurantData(data, titlePrefix = '', source = 'geo') {
+            if (teamMode) return;
             const mode = modeSelect.value;
             let placesForRoulette = [];
             let listHtml = '';
@@ -574,8 +920,7 @@
 
             restaurants = placesForRoulette.slice(0, SEGMENT_COUNT);
             statusMessage.textContent = source === 'manual' ? '선택한 동네의 후보가 준비되었어요! START를 눌러주세요.' : '룰렛이 준비되었습니다! START 버튼을 누르세요.';
-            resetBtn.disabled = false;
-            startBtn.disabled = false;
+            updateStartButtonState();
             saveContainer.classList.remove('hidden');
             rouletteNameInput.value = '';
             drawWheel();
@@ -585,6 +930,10 @@
         }
 
         function handleApplyCustomChart() {
+            if (teamMode) {
+                statusMessage.textContent = '팀플레이 모드에서는 직접 만든 룰렛을 적용할 수 없어요. 먼저 팀에서 나가주세요.';
+                return;
+            }
             const inputs = document.querySelectorAll('.custom-input');
             const customNames = Array.from(inputs).map(input => input.value.trim()).filter(name => name !== '');
 
@@ -602,8 +951,7 @@
             resetState();
             processRestaurantData(customRestaurants, '직접 만든 룰렛');
             statusMessage.textContent = '직접 만든 룰렛을 적용했습니다!';
-            startBtn.disabled = false;
-            resetBtn.disabled = false;
+            updateStartButtonState();
         }
 
         function applyTemplate(type) {
@@ -631,6 +979,11 @@
                 saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
                 delete saveBtn.dataset.loading;
             };
+            if (teamMode) {
+                statusMessage.textContent = '팀플레이 룰렛은 저장할 수 없습니다.';
+                finishSave();
+                return;
+            }
             const name = rouletteNameInput.value.trim();
             if (!name) {
                 statusMessage.textContent = "룰렛 이름을 입력해주세요.";
@@ -727,9 +1080,13 @@
 
         async function loadSpecificRoulette(docId, type) {
             if (!userId) return;
+            if (teamMode) {
+                statusMessage.textContent = '팀플레이 모드에서는 개인이나 공개 룰렛을 불러올 수 없어요. 먼저 팀에서 나가주세요.';
+                return;
+            }
             try {
                 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const collectionPath = type === 'private' 
+                const collectionPath = type === 'private'
                     ? ["artifacts", appId, "users", userId, "roulettes"] 
                     : ["artifacts", appId, "public", "data", "shared-roulettes"];
                 
@@ -743,8 +1100,7 @@
                     statusMessage.textContent = `'${rouletteData.name}' 룰렛을 적용했습니다.`;
                     processRestaurantData(restaurants, rouletteData.name);
                     drawWheel();
-                    startBtn.disabled = false;
-                    resetBtn.disabled = false;
+                    updateStartButtonState();
                 }
             } catch (error) {
                 console.error("룰렛 불러오기 실패:", error);
@@ -870,13 +1226,28 @@
         }
 
         function populateWinnerCard(winner) {
-            winnerName.textContent = winner.place_name;
+            const displayName = winner.isTeamEntry ? (winner.rawText || winner.place_name) : winner.place_name;
+            winnerName.textContent = displayName;
+            winnerCallBtn.classList.remove('hidden');
+            winnerMapBtn.classList.remove('opacity-60', 'pointer-events-none');
+
+            if (winner.isTeamEntry) {
+                winnerAddress.innerHTML = `<span class="font-semibold text-gray-700">✍️</span> 팀에서 직접 적은 메뉴예요.`;
+                winnerPhone.innerHTML = `<span class="font-semibold text-gray-700">📞</span> 연락처 정보가 없어요.`;
+                winnerCallBtn.href = '#';
+                winnerCallBtn.classList.add('hidden');
+                winnerMapBtn.href = '#';
+                winnerMapBtn.classList.add('opacity-60', 'pointer-events-none');
+                winnerTip.innerHTML = `<span class="font-semibold text-gray-700">💡</span> 팀원들과 맛집 정보를 공유해보세요!`;
+                winnerTag.textContent = '팀 추천';
+                return;
+            }
+
             winnerAddress.innerHTML = `<span class="font-semibold text-gray-700">📍</span> ${safeText(winner.road_address_name || winner.address_name || '주소 정보 없음')}`;
             const phone = winner.phone || '';
             if (phone) {
                 winnerPhone.innerHTML = `<span class="font-semibold text-gray-700">📞</span> ${safeText(phone)}`;
                 winnerCallBtn.href = `tel:${phone.replace(/[^0-9+]/g, '')}`;
-                winnerCallBtn.classList.remove('hidden');
             } else {
                 winnerPhone.innerHTML = `<span class="font-semibold text-gray-700">📞</span> 전화 정보가 없어요.`;
                 winnerCallBtn.href = '#';
@@ -884,12 +1255,11 @@
             }
             if (winner.place_url) {
                 winnerMapBtn.href = winner.place_url;
-                winnerMapBtn.classList.remove('opacity-60', 'pointer-events-none');
             } else {
                 winnerMapBtn.href = '#';
                 winnerMapBtn.classList.add('opacity-60', 'pointer-events-none');
             }
-            winnerTip.innerHTML = `<span class="font-semibold text-gray-700">⏰</span> 영업시간 정보는 카카오 페이지에서 확인해 주세요.`;
+            winnerTip.innerHTML = `<span class="font-semibold text-gray-700">⏰</span> 영업시간 정보는 카카오 페이지에서 확인해주세요.`;
             winnerTag.textContent = modeSelect.value === 'random' ? '완전 랜덤!' : (modeSelect.value === 'distance' ? '가까운 행운' : '추천 픽');
         }
     </script>

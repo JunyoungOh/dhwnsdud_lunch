@@ -71,26 +71,64 @@
         <div class="lg:col-span-2 order-1 lg:order-2 flex flex-col items-center w-full">
             <div class="text-center mb-4">
                 <h1 class="text-4xl font-bold text-gray-800">오늘 뭐 먹지?</h1>
-                <p id="status-message" class="text-gray-600 mt-2 h-6">룰렛 모드를 선택하고 Reset 버튼을 누르세요!</p>
+                <p id="status-message" class="text-gray-600 mt-2 min-h-[1.5rem]">주변 맛집을 모으는 중이에요...</p>
+                <div id="location-fallback" class="hidden mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
+                    <span class="text-gray-500">위치 접근이 어렵다면?</span>
+                    <label class="flex items-center gap-2">
+                        <span class="text-gray-600">동네 선택</span>
+                        <select id="manual-location-select" class="border rounded px-2 py-1 text-sm">
+                            <option value="">동네를 골라주세요</option>
+                            <option value="37.4979,127.0276">서울 강남역</option>
+                            <option value="37.5575,126.9249">서울 홍대입구</option>
+                            <option value="37.4021,127.1089">경기 판교</option>
+                            <option value="35.1576,129.0591">부산 서면</option>
+                            <option value="35.8714,128.6014">대구 동성로</option>
+                            <option value="35.1796,129.0756">부산 남포동</option>
+                        </select>
+                    </label>
+                    <button id="apply-manual-location" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1 rounded-md">이 동네로 보기</button>
+                </div>
             </div>
 
             <div class="roulette-container mx-auto mb-4">
                 <div class="pointer"></div>
                 <canvas id="rouletteCanvas"></canvas>
             </div>
-            
+
+            <div id="winner-card" class="hidden w-full max-w-md bg-white rounded-lg shadow-lg mb-4 p-4 space-y-3">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-green-600">오늘의 당첨!</p>
+                        <h2 id="winner-name" class="text-2xl font-bold text-gray-800"></h2>
+                    </div>
+                    <span id="winner-tag" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">행운 가득</span>
+                </div>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <p id="winner-address" class="flex items-center gap-2"></p>
+                    <p id="winner-phone" class="flex items-center gap-2"></p>
+                    <p id="winner-tip" class="flex items-center gap-2 text-xs text-gray-500"></p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <a id="winner-map-btn" class="flex-1 text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-md" target="_blank" rel="noopener">길찾기</a>
+                    <a id="winner-call-btn" class="flex-1 text-center bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-md" target="_blank" rel="noopener">전화하기</a>
+                </div>
+                <button id="winner-reroll" class="w-full bg-gray-900 hover:bg-gray-700 text-white font-bold py-2 rounded-md">다시 돌리기</button>
+            </div>
+
             <div class="bg-white p-4 rounded-lg shadow-md w-full max-w-md mb-4">
                 <div class="flex items-center justify-between mb-4">
-                    <label for="mode-select" class="font-semibold text-gray-700">룰렛 모드:</label>
+                    <label for="mode-select" class="font-semibold text-gray-700 flex items-center gap-2">
+                        룰렛 모드
+                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">평점/리뷰 기반 추천은 준비 중</span>
+                    </label>
                     <select id="mode-select" class="rounded-md border-gray-300 shadow-sm">
-                        <option value="mix" selected>기본 조합 (추천)</option>
-                        <option value="rating">⭐ 평점 Top 9</option>
-                        <option value="review">✍️ 리뷰 많은 곳 Top 9</option>
+                        <option value="mix" selected>🍱 추천 믹스</option>
+                        <option value="distance">🚶‍♂️ 가까운 순 9곳</option>
                         <option value="random">🎲 랜덤 9곳</option>
                     </select>
                 </div>
                 <div class="flex justify-center space-x-2">
-                    <button id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">Reset</button>
+                    <button id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">다시 불러오기</button>
                     <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full shadow-lg" disabled>START</button>
                 </div>
             </div>
@@ -113,7 +151,13 @@
             <!-- 직접 차트 만들기 섹션 -->
             <div class="w-full max-w-md bg-white rounded-lg shadow p-4 mt-6">
                 <h2 class="text-xl font-bold text-center mb-2">📝 직접 차트 만들기</h2>
-                <p class="text-xs text-gray-500 text-center mb-3">'저장 할 때에는 괄호와 함께 지역명을 써주시는 걸 추천드립니다.'</p>
+                <p class="text-xs text-gray-500 text-center mb-3">9칸을 모두 채우지 않아도 괜찮아요. 빈칸은 자동으로 ‘다시 한 번’으로 채워집니다.</p>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="korean">한식 샘플</button>
+                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="noodle">면 요리 샘플</button>
+                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="office">직장인 빠른 점심</button>
+                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="snack">분식 인기 메뉴</button>
+                </div>
                 <div id="custom-chart-inputs" class="grid grid-cols-3 gap-2 mb-3">
                     <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 1">
                     <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 2">
@@ -132,8 +176,8 @@
         <!-- 자랑하기 게시판 (오른쪽) -->
         <div class="order-3 w-full bg-white p-4 rounded-lg shadow-lg">
             <h2 class="text-xl font-bold text-center mb-2">👑 룰렛 자랑하기</h2>
-            <p class="text-xs text-gray-500 text-center mb-3">'좋아요' 순으로 상단 노출이 되며, '싫어요' 10개 이상 받을시 하루 후 사라져요</p>
-            <input type="search" id="search-shared" placeholder="룰렛 이름, 지역명 검색..." class="w-full p-2 border rounded-md mb-4">
+            <p class="text-xs text-gray-500 text-center mb-3">좋아요가 많은 순서대로 보여드려요. 싫어요가 많은 글은 운영자가 확인 후 숨깁니다.</p>
+            <input type="search" id="search-shared" placeholder="예: (역삼) 족발" class="w-full p-2 border rounded-md mb-4">
             <div id="shared-roulettes-list" class="h-[430px] overflow-y-auto custom-scrollbar"></div>
         </div>
     </main>
@@ -159,6 +203,18 @@
         const sharedRoulettesList = document.getElementById('shared-roulettes-list');
         const searchSharedInput = document.getElementById('search-shared');
         const applyCustomBtn = document.getElementById('apply-custom-btn');
+        const locationFallback = document.getElementById('location-fallback');
+        const manualLocationSelect = document.getElementById('manual-location-select');
+        const applyManualLocationBtn = document.getElementById('apply-manual-location');
+        const winnerCard = document.getElementById('winner-card');
+        const winnerName = document.getElementById('winner-name');
+        const winnerAddress = document.getElementById('winner-address');
+        const winnerPhone = document.getElementById('winner-phone');
+        const winnerTip = document.getElementById('winner-tip');
+        const winnerMapBtn = document.getElementById('winner-map-btn');
+        const winnerCallBtn = document.getElementById('winner-call-btn');
+        const winnerRerollBtn = document.getElementById('winner-reroll');
+        const winnerTag = document.getElementById('winner-tag');
         
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
@@ -176,10 +232,20 @@
             const size = Math.min(window.innerWidth * 0.9, 450);
             canvas.width = size;
             canvas.height = size;
-            resetBtn.disabled = true;
             drawWheel();
             initializeFirebase();
+            attemptAutoDiscovery();
         };
+
+        function attemptAutoDiscovery() {
+            statusMessage.textContent = '주변 맛집을 모으는 중이에요...';
+            handleReset({ silent: true });
+        }
+
+        const textEscapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+        function safeText(text = '') {
+            return String(text).replace(/[&<>"']/g, char => textEscapes[char] || char);
+        }
 
         async function initializeFirebase() {
             try {
@@ -213,12 +279,31 @@
         }
 
         // --- 이벤트 리스너 ---
-        resetBtn.addEventListener('click', handleReset);
+        resetBtn.addEventListener('click', () => handleReset());
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);
         searchSharedInput.addEventListener('input', renderSharedRoulettes);
         applyCustomBtn.addEventListener('click', handleApplyCustomChart);
+        applyManualLocationBtn.addEventListener('click', () => {
+            const value = manualLocationSelect.value;
+            if (!value) {
+                statusMessage.textContent = '동네를 선택해 주세요.';
+                return;
+            }
+            const [lat, lng] = value.split(',').map(Number);
+            locationFallback.classList.add('hidden');
+            fetchRestaurants(lat, lng, 'manual');
+        });
+        winnerRerollBtn.addEventListener('click', () => {
+            if (!startBtn.disabled) {
+                handleStart();
+            }
+        });
 
+        document.querySelectorAll('.sample-template-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyTemplate(btn.dataset.template));
+        });
+        
         // --- 렌더링 함수 ---
         function drawWheel() {
             const radius = canvas.width / 2;
@@ -250,7 +335,7 @@
                 ctx.fillStyle = '#1f2937';
                 ctx.font = `bold ${radius * 0.08}px 'Noto Sans KR'`;
                 
-                const text = restaurants[i] ? restaurants[i].place_name : (restaurants.length > 0 ? '?' : '초기화!');
+                const text = restaurants[i] ? restaurants[i].place_name : (restaurants.length > 0 ? '?' : '준비 중');
                 const textRadius = radius * 0.9;
                 
                 let displayText = text;
@@ -265,19 +350,23 @@
         }
 
         // --- 상태 관리 함수 ---
-        function handleReset() {
+        function handleReset(options = {}) {
             if (isSpinning) return;
-            resetState();
-            statusMessage.textContent = '현재 위치를 확인 중입니다...';
+            const { silent = false } = options;
+            resetState(silent);
+            if (!silent) {
+                statusMessage.textContent = '주변 식당을 다시 찾고 있어요...';
+            }
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError);
+                navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, { enableHighAccuracy: false, timeout: 8000 });
             } else {
-                statusMessage.textContent = '위치 정보를 사용할 수 없습니다.';
+                statusMessage.textContent = '위치 정보를 사용할 수 없습니다. 동네를 직접 선택해 주세요.';
                 resetBtn.disabled = false;
+                locationFallback.classList.remove('hidden');
             }
         }
-        
-        function resetState() {
+
+        function resetState(keepStatus = false) {
             isSpinning = false;
             startBtn.disabled = true;
             resetBtn.disabled = true;
@@ -290,6 +379,10 @@
             canvas.classList.remove('blinking');
             if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
             drawWheel();
+            winnerCard.classList.add('hidden');
+            if (!keepStatus) {
+                statusMessage.textContent = '주변 맛집을 모으는 중이에요...';
+            }
         }
 
         function handleStart() {
@@ -301,6 +394,7 @@
             saveContainer.classList.add('hidden');
             canvas.classList.remove('blinking');
             if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+            winnerCard.classList.add('hidden');
 
             const randomSpins = Math.floor(Math.random() * 5) + 5;
             const randomStopAngle = Math.random() * 360;
@@ -322,8 +416,15 @@
                 
                 if (winner.id === 'reroll') {
                     statusMessage.innerHTML = `아쉽네요! <span class="font-bold text-red-600">다시 한 번!</span>`;
+                    winnerCard.classList.add('hidden');
+                    startBtn.disabled = false;
+                    resetBtn.disabled = false;
                 } else {
-                    statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${winner.place_name}</a>!`;
+                    statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${safeText(winner.place_name)}</a>!`;
+                    populateWinnerCard(winner);
+                    winnerCard.classList.remove('hidden');
+                    startBtn.disabled = false;
+                    resetBtn.disabled = false;
                 }
                 
                 startBlinking();
@@ -350,20 +451,22 @@
         function onGeoSuccess(position) {
             lastKnownCoords = { lat: position.coords.latitude, lng: position.coords.longitude };
             statusMessage.textContent = '주변 식당 정보를 가져오는 중...';
-            fetchRestaurants(lastKnownCoords.lat, lastKnownCoords.lng);
+            locationFallback.classList.add('hidden');
+            fetchRestaurants(lastKnownCoords.lat, lastKnownCoords.lng, 'geo');
         }
 
         function onGeoError(error) {
-            statusMessage.textContent = '위치 정보를 가져올 수 없습니다.';
-            resetBtn.disabled = false;
             console.error(error);
+            statusMessage.textContent = '위치 정보를 확인할 수 없어요. 아래에서 동네를 직접 선택해 주세요.';
+            resetBtn.disabled = false;
+            locationFallback.classList.remove('hidden');
         }
 
-        function fetchRestaurants(lat, lng) {
+        function fetchRestaurants(lat, lng, source = 'geo') {
             const places = new kakao.maps.services.Places();
             places.categorySearch('FD6', (result, status) => {
                 if (status === kakao.maps.services.Status.OK) {
-                    processRestaurantData(result);
+                    processRestaurantData(result, '', source);
                 } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
                     processRestaurantData([]);
                 }
@@ -374,52 +477,45 @@
             }, { location: new kakao.maps.LatLng(lat, lng), radius: 1000, size: 15 });
         }
 
-        function processRestaurantData(data, titlePrefix = '') {
+        function processRestaurantData(data, titlePrefix = '', source = 'geo') {
             const mode = modeSelect.value;
             let placesForRoulette = [];
             let listHtml = '';
             
-            const createListItem = (place, type) => {
+            const createListItem = (place) => {
                 if (place.id === 'reroll') {
                     return `<li class="text-gray-500">- 다시 한 번</li>`;
                 }
-                let additionalInfo = '';
-                if (type === 'rating' && place.rating > 0) {
-                    additionalInfo = `<span class="text-sm font-bold text-yellow-500 ml-2">⭐ ${parseFloat(place.rating).toFixed(1)}</span>`;
-                }
+                const distanceMeters = Number(place.distance || 0);
+                const distanceText = distanceMeters > 0 ? `${Math.round(distanceMeters / 10) * 10}m` : '거리 정보 없음';
+                const category = place.category_name ? place.category_name.split('>').pop().trim() : '';
                 const linkContent = place.place_url && place.place_url !== '#'
-                    ? `<a href="${place.place_url}" target="_blank" class="hover:underline hover:text-blue-600">${place.place_name}</a>`
-                    : place.place_name;
+                    ? `<a href="${place.place_url}" target="_blank" class="hover:underline hover:text-blue-600">${safeText(place.place_name)}</a>`
+                    : safeText(place.place_name);
 
-                return `<li class="flex justify-between items-center" title="${place.place_name}">
-                            <span class="truncate">- ${linkContent}</span>
-                            ${additionalInfo}
+                return `<li class="bg-slate-50 rounded-md px-3 py-2 shadow-sm" title="${safeText(place.place_name)}">
+                            <div class="flex items-center justify-between text-sm font-semibold text-gray-700">
+                                <span class="truncate">${linkContent}</span>
+                                <span class="text-xs text-gray-500">${safeText(category)}</span>
+                            </div>
+                            <div class="mt-1 text-xs text-gray-500">${distanceText} · ${safeText(place.road_address_name || place.address_name || '')}</div>
                         </li>`;
             };
 
             if (titlePrefix) {
-                 placesForRoulette = data;
-                 listHtml = `<div>
-                                <h3 class="text-lg font-semibold text-indigo-700 mb-2 border-b-2 border-indigo-200 pb-1">${titlePrefix}</h3>
-                                <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
+                placesForRoulette = data;
+                listHtml = `<div>
+                                <h3 class="text-lg font-semibold text-indigo-700 mb-2 border-b-2 border-indigo-200 pb-1">${safeText(titlePrefix)}</h3>
+                                <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p)).join('')}</ul>
                             </div>`;
             } else {
-                 switch (mode) {
-                    case 'rating': {
-                        const topRated = [...data].sort((a,b) => (b.rating || 0) - (a.rating || 0));
-                        placesForRoulette = topRated;
+                switch (mode) {
+                    case 'distance': {
+                        const distanceSorted = [...data].sort((a, b) => Number(a.distance || Infinity) - Number(b.distance || Infinity));
+                        placesForRoulette = distanceSorted;
                         listHtml = `<div>
-                                        <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 순</h3>
-                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'rating')).join('')}</ul>
-                                    </div>`;
-                        break;
-                    }
-                    case 'review': {
-                        const topReviewed = data.filter(d => d.id);
-                        placesForRoulette = topReviewed;
-                        listHtml = `<div>
-                                        <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳</h3>
-                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'review')).join('')}</ul>
+                                        <h3 class="text-lg font-semibold text-blue-700 mb-2 border-b-2 border-blue-200 pb-1">🚶‍♂️ 가까운 순 추천</h3>
+                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p)).join('')}</ul>
                                     </div>`;
                         break;
                     }
@@ -427,36 +523,45 @@
                         const randomPlaces = [...data].sort(() => 0.5 - Math.random());
                         placesForRoulette = randomPlaces;
                         listHtml = `<div>
-                                        <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤</h3>
-                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p, 'random')).join('')}</ul>
+                                        <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤 추천</h3>
+                                        <ul class="space-y-2 text-gray-700">${placesForRoulette.map(p => createListItem(p)).join('')}</ul>
                                     </div>`;
                         break;
                     }
-                    default: { // mix
-                        const sortedByRating = [...data].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-                        const withReviews = data.filter(d => d.id);
-                        let usedIds = new Set();
-                        const topRatingPlaces = [], topReviewPlaces = [], randomPlaces = [];
-
-                        for (const place of sortedByRating) if (topRatingPlaces.length < 3 && !usedIds.has(place.id)) { topRatingPlaces.push(place); usedIds.add(place.id); }
-                        for (const place of withReviews) if (topReviewPlaces.length < 3 && !usedIds.has(place.id)) { topReviewPlaces.push(place); usedIds.add(place.id); }
-                        const remaining = data.filter(place => !usedIds.has(place.id));
-                        while (randomPlaces.length < 3 && remaining.length > 0) {
-                            const randomPlace = remaining.splice(Math.floor(Math.random() * remaining.length), 1)[0];
-                            randomPlaces.push(randomPlace); usedIds.add(randomPlace.id);
+                    default: {
+                        const distanceSorted = [...data].sort((a, b) => Number(a.distance || Infinity) - Number(b.distance || Infinity));
+                        const close = distanceSorted.slice(0, 3);
+                        const remainingAfterClose = data.filter(place => !close.find(c => c.id === place.id));
+                        const varietyMap = new Map();
+                        const variety = [];
+                        for (const place of remainingAfterClose) {
+                            const category = (place.category_name || '').split('>').pop()?.trim() || '기타';
+                            if (!varietyMap.has(category)) {
+                                variety.push(place);
+                                varietyMap.set(category, true);
+                            }
+                            if (variety.length >= 3) break;
                         }
-                        placesForRoulette = [...topRatingPlaces, ...topReviewPlaces, ...randomPlaces];
-                        listHtml = `<div>
-                                        <h3 class="text-lg font-semibold text-purple-700 mb-2 border-b-2 border-purple-200 pb-1">⭐ 평점 Top 3</h3>
-                                        <ul class="space-y-2 text-gray-700">${topRatingPlaces.map(p => createListItem(p, 'rating')).join('')}</ul>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">✍️ 리뷰 많은 곳 Top 3</h3>
-                                        <ul class="space-y-2 text-gray-700">${topReviewPlaces.map(p => createListItem(p, 'review')).join('')}</ul>
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 랜덤 추천</h3>
-                                        <ul class="space-y-2 text-gray-700">${randomPlaces.map(p => createListItem(p, 'random')).join('')}</ul>
+                        const leftovers = data.filter(place => !close.includes(place) && !variety.includes(place));
+                        const randomPick = [];
+                        while (randomPick.length < 3 && leftovers.length > 0) {
+                            const randomIndex = Math.floor(Math.random() * leftovers.length);
+                            randomPick.push(leftovers.splice(randomIndex, 1)[0]);
+                        }
+                        placesForRoulette = [...close, ...variety, ...randomPick];
+                        listHtml = `<div class="space-y-4">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-emerald-700 mb-2 border-b-2 border-emerald-200 pb-1">🍱 가까우면서 인기 있는 조합</h3>
+                                            <ul class="space-y-2 text-gray-700">${close.map(p => createListItem(p)).join('')}</ul>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-teal-700 mb-2 border-b-2 border-teal-200 pb-1">🍲 다양한 메뉴</h3>
+                                            <ul class="space-y-2 text-gray-700">${variety.map(p => createListItem(p)).join('')}</ul>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-orange-700 mb-2 border-b-2 border-orange-200 pb-1">🎲 깜짝 선택</h3>
+                                            <ul class="space-y-2 text-gray-700">${randomPick.map(p => createListItem(p)).join('')}</ul>
+                                        </div>
                                     </div>`;
                     }
                 }
@@ -464,11 +569,11 @@
             
             const rerollOption = { place_name: '다시 한 번', id: 'reroll', place_url: '#' };
             while (placesForRoulette.length < SEGMENT_COUNT) {
-                 placesForRoulette.push(rerollOption);
+                placesForRoulette.push(rerollOption);
             }
 
             restaurants = placesForRoulette.slice(0, SEGMENT_COUNT);
-            statusMessage.textContent = '룰렛이 준비되었습니다! START 버튼을 누르세요.';
+            statusMessage.textContent = source === 'manual' ? '선택한 동네의 후보가 준비되었어요! START를 눌러주세요.' : '룰렛이 준비되었습니다! START 버튼을 누르세요.';
             resetBtn.disabled = false;
             startBtn.disabled = false;
             saveContainer.classList.remove('hidden');
@@ -476,6 +581,7 @@
             drawWheel();
             candidateListsWrapper.innerHTML = listHtml;
             restaurantListContainer.classList.remove('hidden');
+            locationFallback.classList.add('hidden');
         }
 
         function handleApplyCustomChart() {
@@ -488,7 +594,7 @@
             }
 
             const customRestaurants = customNames.map((name, index) => ({
-                place_name: name,
+                place_name: safeText(name),
                 id: `custom_${Date.now()}_${index}`,
                 place_url: '#'
             }));
@@ -500,15 +606,40 @@
             resetBtn.disabled = false;
         }
 
+        function applyTemplate(type) {
+            const templates = {
+                korean: ['된장찌개', '김치찌개', '불고기 백반', '냉면', '제육볶음', '칼국수', '돈까스', '곰탕', '비빔밥'],
+                noodle: ['짜장면', '짬뽕', '우동', '파스타', '라멘', '막국수', '쌀국수', '칼국수', '소바'],
+                office: ['샐러드', '샌드위치', '포케', '김밥', '덮밥', '컵밥', '라이스버거', '파스타', '타코'],
+                snack: ['떡볶이', '순대', '튀김 모둠', '김밥', '어묵', '라볶이', '찐만두', '핫도그', '튀김우동']
+            };
+            const selected = templates[type] || [];
+            const inputs = document.querySelectorAll('.custom-input');
+            inputs.forEach((input, index) => {
+                input.value = selected[index] || '';
+            });
+        }
+
         // --- Firebase Firestore 함수 ---
         async function handleSave() {
+            if (saveBtn.dataset.loading === 'true') return;
+            saveBtn.dataset.loading = 'true';
+            saveBtn.disabled = true;
+            saveBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            const finishSave = () => {
+                saveBtn.disabled = false;
+                saveBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                delete saveBtn.dataset.loading;
+            };
             const name = rouletteNameInput.value.trim();
             if (!name) {
                 statusMessage.textContent = "룰렛 이름을 입력해주세요.";
+                finishSave();
                 return;
             }
             if (restaurants.some(r => r.id === 'reroll')) {
                 statusMessage.textContent = "'다시 한 번'이 포함된 룰렛은 저장할 수 없습니다.";
+                finishSave();
                 return;
             }
 
@@ -528,12 +659,14 @@
                     console.error("룰렛 저장 실패:", error);
                     statusMessage.textContent = "룰렛 저장에 실패했습니다.";
                 }
+                finishSave();
                 return;
             }
 
             // 위치 기반 룰렛 저장 (기존 로직)
             if (!userId || !lastKnownCoords) {
                 statusMessage.textContent = "위치 정보가 필요합니다.";
+                finishSave();
                 return;
             }
             const geocoder = new kakao.maps.services.Geocoder();
@@ -560,6 +693,7 @@
                     console.error("룰렛 저장 실패:", error);
                     statusMessage.textContent = "룰렛 저장에 실패했습니다.";
                 }
+                finishSave();
             });
         }
 
@@ -575,7 +709,7 @@
                     const div = document.createElement('div');
                     div.className = 'flex justify-between items-center p-2 border-b';
                     div.innerHTML = `
-                        <span class="font-semibold truncate" title="${roulette.name}">${roulette.name}</span>
+                        <span class="font-semibold truncate" title="${safeText(roulette.name)}">${safeText(roulette.name)}</span>
                         <div class="flex-shrink-0 space-x-1">
                             <button data-id="${doc.id}" class="load-btn bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">불러오기</button>
                             <button data-id="${doc.id}" class="share-btn bg-yellow-100 text-yellow-800 text-xs font-semibold px-2 py-1 rounded">자랑하기</button>
@@ -648,15 +782,10 @@
             const q = query(collection(db, "artifacts", appId, "public", "data", "shared-roulettes"));
             
             onSnapshot(q, (snapshot) => {
-                const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
                 let roulettes = [];
                 snapshot.forEach(doc => {
                     const shared = doc.data();
-                    if (shared.dislikes >= 10 && shared.sharedAt?.toDate() < oneDayAgo) {
-                        deleteDoc(doc.ref);
-                    } else {
-                        roulettes.push({ id: doc.id, ...shared });
-                    }
+                    roulettes.push({ id: doc.id, ...shared });
                 });
 
                 roulettes.sort((a, b) => {
@@ -674,23 +803,24 @@
 
         function renderSharedRoulettes() {
             const searchTerm = searchSharedInput.value.toLowerCase();
-            const filteredList = allSharedRoulettes.filter(shared => shared.name.toLowerCase().includes(searchTerm));
+            const filteredList = allSharedRoulettes.filter(shared => shared.name?.toLowerCase().includes(searchTerm));
 
             sharedRoulettesList.innerHTML = filteredList.length === 0 ? '<p class="text-center text-gray-500">일치하는 룰렛이 없어요.</p>' : '';
             
             filteredList.forEach(shared => {
                 const div = document.createElement('div');
-                div.className = 'p-3 border-b';
+                div.className = 'p-3 mb-3 border border-slate-200 rounded-lg shadow-sm bg-white';
+                const restaurants = Array.isArray(shared.restaurants) ? shared.restaurants : [];
                 div.innerHTML = `
-                    <p class="font-bold truncate" title="${shared.name}">${shared.name}</p>
-                    <ul class="text-sm text-gray-600 mt-1 pl-2">
-                        ${shared.restaurants.slice(0,3).map(r => `<li class="truncate">- ${r.place_name}</li>`).join('')}
-                        ${shared.restaurants.length > 3 ? '<li class="text-gray-400">... 등</li>' : ''}
+                    <p class="font-bold truncate" title="${safeText(shared.name)}">${safeText(shared.name)}</p>
+                    <ul class="text-sm text-gray-600 mt-2 grid grid-cols-3 gap-2">
+                        ${restaurants.slice(0,3).map(r => `<li class="truncate bg-slate-100 px-2 py-1 rounded text-xs">${safeText(r.place_name)}</li>`).join('')}
+                        ${restaurants.length > 3 ? '<li class="text-gray-400 col-span-3 text-xs">... 등 다양한 식당이 있어요</li>' : ''}
                     </ul>
-                    <div class="flex items-center justify-between mt-2">
+                    <div class="flex items-center justify-between mt-3">
                         <div class="flex items-center space-x-2">
-                            <button data-id="${shared.id}" data-vote="like" class="vote-btn flex items-center bg-gray-200 px-2 py-1 rounded-full text-xs hover:bg-blue-200">👍 <span class="ml-1 font-semibold">${shared.likes || 0}</span></button>
-                            <button data-id="${shared.id}" data-vote="dislike" class="vote-btn flex items-center bg-gray-200 px-2 py-1 rounded-full text-xs hover:bg-red-200">👎 <span class="ml-1 font-semibold">${shared.dislikes || 0}</span></button>
+                            <button data-id="${shared.id}" data-vote="like" class="vote-btn flex items-center bg-blue-50 px-3 py-1 rounded-full text-xs hover:bg-blue-100">👍 <span class="ml-1 font-semibold">${shared.likes || 0}</span></button>
+                            <button data-id="${shared.id}" data-vote="dislike" class="vote-btn flex items-center bg-rose-50 px-3 py-1 rounded-full text-xs hover:bg-rose-100">👎 <span class="ml-1 font-semibold">${shared.dislikes || 0}</span></button>
                         </div>
                         <button data-id="${shared.id}" class="apply-btn bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold py-1 px-3 rounded">적용하기</button>
                     </div>
@@ -708,23 +838,59 @@
             const docRef = doc(db, "artifacts", appId, "public", "data", "shared-roulettes", docId);
             
             const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                const voters = docSnap.data().voters || [];
-                if (voters.includes(userId)) {
-                    statusMessage.textContent = "이미 투표하셨습니다.";
-                    return;
-                }
+            if (!docSnap.exists()) return;
 
-                const updateData = {
-                    voters: arrayUnion(userId)
-                };
-                if (voteType === 'like') {
-                    updateData.likes = increment(1);
-                } else {
-                    updateData.dislikes = increment(1);
-                }
-                await updateDoc(docRef, updateData);
+            const localVotesRaw = localStorage.getItem('lunch-votes') || '{}';
+            const localVotes = JSON.parse(localVotesRaw);
+            if (localVotes[docId]) {
+                statusMessage.textContent = '이미 투표하셨습니다.';
+                return;
             }
+
+            const voters = docSnap.data().voters || [];
+            if (voters.includes(userId)) {
+                statusMessage.textContent = '이미 투표하셨습니다.';
+                localVotes[docId] = true;
+                localStorage.setItem('lunch-votes', JSON.stringify(localVotes));
+                return;
+            }
+
+            const updateData = {
+                voters: arrayUnion(userId)
+            };
+            if (voteType === 'like') {
+                updateData.likes = increment(1);
+            } else {
+                updateData.dislikes = increment(1);
+            }
+            await updateDoc(docRef, updateData);
+            localVotes[docId] = true;
+            localStorage.setItem('lunch-votes', JSON.stringify(localVotes));
+            statusMessage.textContent = voteType === 'like' ? '좋아요 감사합니다!' : '의견을 남겨주셔서 감사해요.';
+        }
+
+        function populateWinnerCard(winner) {
+            winnerName.textContent = winner.place_name;
+            winnerAddress.innerHTML = `<span class="font-semibold text-gray-700">📍</span> ${safeText(winner.road_address_name || winner.address_name || '주소 정보 없음')}`;
+            const phone = winner.phone || '';
+            if (phone) {
+                winnerPhone.innerHTML = `<span class="font-semibold text-gray-700">📞</span> ${safeText(phone)}`;
+                winnerCallBtn.href = `tel:${phone.replace(/[^0-9+]/g, '')}`;
+                winnerCallBtn.classList.remove('hidden');
+            } else {
+                winnerPhone.innerHTML = `<span class="font-semibold text-gray-700">📞</span> 전화 정보가 없어요.`;
+                winnerCallBtn.href = '#';
+                winnerCallBtn.classList.add('hidden');
+            }
+            if (winner.place_url) {
+                winnerMapBtn.href = winner.place_url;
+                winnerMapBtn.classList.remove('opacity-60', 'pointer-events-none');
+            } else {
+                winnerMapBtn.href = '#';
+                winnerMapBtn.classList.add('opacity-60', 'pointer-events-none');
+            }
+            winnerTip.innerHTML = `<span class="font-semibold text-gray-700">⏰</span> 영업시간 정보는 카카오 페이지에서 확인해 주세요.`;
+            winnerTag.textContent = modeSelect.value === 'random' ? '완전 랜덤!' : (modeSelect.value === 'distance' ? '가까운 행운' : '추천 픽');
         }
     </script>
 </body>

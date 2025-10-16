@@ -149,7 +149,10 @@
                         <h2 class="text-3xl font-bold text-gray-900">모드를 바꿔가며 다양한 점심 아이디어를 만나보세요</h2>
                         <p id="mode-description" class="text-sm text-gray-500">현재 위치를 기반으로 주변 식당 후보를 자동으로 채워 드립니다.</p>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full sm:w-auto">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full sm:w-auto">
+                        <button id="home-btn" class="mode-button mode-tab flex items-center justify-center h-10 px-4 rounded-full border border-transparent bg-white shadow-sm text-sm font-semibold text-gray-600">
+                            Home
+                        </button>
                         <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="location">
                             <span class="mode-tab-label">📍 위치기반</span>
                         </button>
@@ -359,6 +362,7 @@
         const modeDescription = document.getElementById('mode-description');
         const modeButtons = document.querySelectorAll('[data-mode-target]');
         const modeScopedElements = document.querySelectorAll('[data-mode-visible]');
+        const homeBtn = document.getElementById('home-btn');
 
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
@@ -487,6 +491,24 @@
 
             updateStartButtonState();
         }
+
+        function returnToLanding() {
+            if (teamMode) {
+                leaveTeamMode({ silent: true });
+            } else {
+                resetState(true);
+            }
+
+            currentMode = null;
+            landingScreen.classList.remove('hidden');
+            appShell.classList.add('hidden');
+            modeButtons.forEach(button => button.classList.remove('mode-button-active'));
+            modeScopedElements.forEach(element => element.classList.add('mode-hidden'));
+            statusMessage.textContent = '모드를 선택해 주세요.';
+            modeDescription.textContent = '세 가지 방식으로 점심 고민을 단번에 해결해 보세요.';
+            activeModeBadge.textContent = '모드를 선택해 주세요';
+            locationFallback.classList.add('hidden');
+        }  
         
         const textEscapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
         function safeText(text = '') {
@@ -803,6 +825,7 @@
         modeButtons.forEach(button => {
             button.addEventListener('click', () => setMode(button.dataset.modeTarget));
         });
+        homeBtn.addEventListener('click', returnToLanding);
         resetBtn.addEventListener('click', () => handleReset());
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);

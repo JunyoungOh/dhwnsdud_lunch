@@ -56,144 +56,264 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #64748b;
         }
+        .mode-button {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .mode-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 35px -15px rgba(30, 64, 175, 0.35);
+        }
+        .mode-button-active {
+            background-color: #111827 !important;
+            color: #f8fafc !important;
+            box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.45);
+        }
+        .mode-button-badge {
+            font-size: 0.75rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .mode-button-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .mode-button-subtitle {
+            font-size: 0.95rem;
+            color: #4b5563;
+        }
+        .mode-tab-label {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .mode-button-arrow {
+            font-size: 1.75rem;
+            color: #cbd5f5;
+        }
+        .mode-button-active .mode-button-badge,
+        .mode-button-active .mode-button-title,
+        .mode-button-active .mode-button-subtitle,
+        .mode-button-active .mode-tab-label,
+        .mode-button-active .mode-button-arrow {
+            color: #f8fafc !important;
+        }
+        .mode-hidden {
+            display: none !important;
+        }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
-
-    <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        <!-- 후보 목록 (왼쪽) -->
-        <div id="restaurant-list-container" class="hidden lg:block order-2 lg:order-1 w-full bg-white p-4 rounded-lg shadow-lg">
-            <h2 class="text-xl font-bold text-center mb-4">오늘의 후보</h2>
-            <div id="candidate-lists-wrapper" class="space-y-4"></div>
-        </div>
-
-        <!-- 룰렛 (중앙) -->
-        <div class="lg:col-span-2 order-1 lg:order-2 flex flex-col items-center w-full">
-            <div class="text-center mb-4">
-                <h1 class="text-4xl font-bold text-gray-800">오늘 뭐 먹지?</h1>
-                <p id="status-message" class="text-gray-600 mt-2 min-h-[1.5rem]">주변 맛집을 모으는 중이에요...</p>
-                <div id="location-fallback" class="hidden mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
-                    <span class="text-gray-500">위치 접근이 어렵다면?</span>
-                    <label class="flex items-center gap-2">
-                        <span class="text-gray-600">동네 선택</span>
-                        <select id="manual-location-select" class="border rounded px-2 py-1 text-sm">
-                            <option value="">동네를 골라주세요</option>
-                            <option value="37.4979,127.0276">서울 강남역</option>
-                            <option value="37.5575,126.9249">서울 홍대입구</option>
-                            <option value="37.4021,127.1089">경기 판교</option>
-                            <option value="35.1576,129.0591">부산 서면</option>
-                            <option value="35.8714,128.6014">대구 동성로</option>
-                            <option value="35.1796,129.0756">부산 남포동</option>
-                        </select>
-                    </label>
-                    <button id="apply-manual-location" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1 rounded-md">이 동네로 보기</button>
+<body class="bg-gray-100 min-h-screen">
+    <div class="min-h-screen flex flex-col">
+        <section id="landing-screen" class="flex-1 flex flex-col items-center justify-center px-4 py-12 text-center">
+            <div class="max-w-2xl mx-auto space-y-10">
+                <div class="space-y-3">
+                    <h1 class="text-4xl sm:text-5xl font-bold text-gray-900">오늘 뭐 먹지?</h1>
+                    <p class="text-gray-600 text-base sm:text-lg">세 가지 방식으로 점심 고민을 단번에 해결해 보세요.</p>
                 </div>
-            </div>
-
-            <div class="roulette-container mx-auto mb-4">
-                <div class="pointer"></div>
-                <canvas id="rouletteCanvas"></canvas>
-            </div>
-
-            <div id="winner-card" class="hidden w-full max-w-md bg-white rounded-lg shadow-lg mb-4 p-4 space-y-3">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <p class="text-sm font-semibold text-green-600">오늘의 당첨!</p>
-                        <h2 id="winner-name" class="text-2xl font-bold text-gray-800"></h2>
-                    </div>
-                    <span id="winner-tag" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">행운 가득</span>
-                </div>
-                <div class="space-y-2 text-sm text-gray-600">
-                    <p id="winner-address" class="flex items-center gap-2"></p>
-                    <p id="winner-phone" class="flex items-center gap-2"></p>
-                    <p id="winner-tip" class="flex items-center gap-2 text-xs text-gray-500"></p>
-                </div>
-                <div class="flex flex-wrap gap-2">
-                    <a id="winner-map-btn" class="flex-1 text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-md" target="_blank" rel="noopener">길찾기</a>
-                    <a id="winner-call-btn" class="flex-1 text-center bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-md" target="_blank" rel="noopener">전화하기</a>
-                </div>
-                <button id="winner-reroll" class="w-full bg-gray-900 hover:bg-gray-700 text-white font-bold py-2 rounded-md">다시 돌리기</button>
-            </div>
-
-            <div class="bg-white p-4 rounded-lg shadow-md w-full max-w-md mb-4">
-                <div class="flex items-center justify-between mb-4">
-                    <label for="mode-select" class="font-semibold text-gray-700 flex items-center gap-2">
-                        룰렛 모드
-                        <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">평점/리뷰 기반 추천은 준비 중</span>
-                    </label>
-                    <select id="mode-select" class="rounded-md border-gray-300 shadow-sm">
-                        <option value="mix" selected>🍱 추천 믹스</option>
-                        <option value="distance">🚶‍♂️ 가까운 순 9곳</option>
-                        <option value="random">🎲 랜덤 9곳</option>
-                    </select>
-                </div>
-                <div class="flex justify-center space-x-2">
-                    <button id="resetBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">다시 불러오기</button>
-                    <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full shadow-lg" disabled>START</button>
+                <div class="grid gap-4">
+                    <button class="mode-button flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent bg-white text-left shadow-sm" data-mode-target="location">
+                        <div class="space-y-2">
+                            <span class="mode-button-badge">MODE 01</span>
+                            <p class="mode-button-title">📍 위치기반 모드</p>
+                            <p class="mode-button-subtitle">현재 위치 정보를 바탕으로 후보를 자동으로 채워요.</p>
+                        </div>
+                        <span class="mode-button-arrow">➜</span>
+                    </button>
+                    <button class="mode-button flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent bg-white text-left shadow-sm" data-mode-target="team">
+                        <div class="space-y-2">
+                            <span class="mode-button-badge">MODE 02</span>
+                            <p class="mode-button-title">🤝 팀플레이 모드</p>
+                            <p class="mode-button-subtitle">같은 엑세스 코드로 접속해 팀원과 함께 룰렛을 채워요.</p>
+                        </div>
+                        <span class="mode-button-arrow">➜</span>
+                    </button>
+                    <button class="mode-button flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent bg-white text-left shadow-sm" data-mode-target="custom">
+                        <div class="space-y-2">
+                            <span class="mode-button-badge">MODE 03</span>
+                            <p class="mode-button-title">🎨 커스텀 모드</p>
+                            <p class="mode-button-subtitle">나만의 룰렛을 직접 만들고 자랑해 보세요.</p>
+                        </div>
+                        <span class="mode-button-arrow">➜</span>
+                    </button>
                 </div>
             </div>
             
-            <div id="save-container" class="hidden w-full max-w-md mb-4">
-                <div class="bg-white p-3 rounded-lg shadow">
-                    <div class="flex justify-center items-center space-x-2">
-                        <input type="text" id="roulette-name-input" placeholder="룰렛 이름 입력" class="border rounded px-2 py-1 flex-grow">
-                        <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-md">저장</button>
+        </section>
+
+        <section id="app-shell" class="hidden flex-1 px-4 py-10">
+            <div class="w-full max-w-7xl mx-auto space-y-8">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div class="space-y-2">
+                        <h2 class="text-3xl font-bold text-gray-900">모드를 바꿔가며 다양한 점심 아이디어를 만나보세요</h2>
+                        <p id="mode-description" class="text-sm text-gray-500">현재 위치를 기반으로 주변 식당 후보를 자동으로 채워 드립니다.</p>
                     </div>
-                    <p class="text-xs text-gray-500 mt-2 text-center">마음에 드는 룰렛이 나오면 소장해두고 계속 사용해보세요!</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full sm:w-auto">
+                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="location">
+                            <span class="mode-tab-label">📍 위치기반</span>
+                        </button>
+                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="team">
+                            <span class="mode-tab-label">🤝 팀플레이</span>
+                        </button>
+                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="custom">
+                            <span class="mode-tab-label">🎨 커스텀</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex flex-col xl:flex-row gap-6">
+                    <aside class="w-full xl:w-72 space-y-6">
+                        <div id="restaurant-list-container" data-mode-visible="location" class="bg-white p-5 rounded-2xl shadow-lg mode-hidden">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-xl font-bold text-gray-900">오늘의 후보</h3>
+                                <span class="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">자동 추천</span>
+                            </div>
+                            <div id="candidate-lists-wrapper" class="space-y-4"></div>
+                        </div>
+
+                        <div id="team-card" data-mode-visible="team" class="bg-white rounded-2xl shadow-lg p-5 space-y-4 mode-hidden">
+                            <div class="text-center space-y-1">
+                                <h3 class="text-xl font-bold text-gray-900">🤝 팀플레이</h3>
+                                <p class="text-xs text-gray-500">같은 엑세스 코드로 접속하면 하나의 룰렛을 함께 채울 수 있어요.</p>
+                            </div>
+                            <div class="flex flex-col sm:flex-row gap-2">
+                                <input id="team-access-input" type="text" placeholder="엑세스 코드 (영문/숫자)" class="border rounded px-3 py-2 text-sm flex-1">
+                                <button id="team-join-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-md">참여하기</button>
+                                <button id="team-leave-btn" class="hidden bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-md">나가기</button>
+                            </div>
+                            <p id="team-status" class="text-xs text-center text-slate-500">엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.</p>
+                            <div id="team-slots-container" class="space-y-2 hidden"></div>
+                        </div>
+                    </aside>
+
+                    <section class="flex-1 space-y-6">
+                        <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-6">
+                            <div class="space-y-4 text-center">
+                                <span id="active-mode-badge" class="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-slate-100 text-sm font-semibold text-slate-600">📍 위치기반 모드</span>
+                                <h3 class="text-3xl font-bold text-gray-900">오늘 뭐 먹지?</h3>
+                                <p id="status-message" class="text-gray-600 min-h-[1.5rem]">모드를 선택해 주세요.</p>
+                                <div id="location-fallback" data-mode-visible="location" class="hidden mode-hidden mt-2 flex flex-wrap items-center justify-center gap-2 text-sm">
+                                    <span class="text-gray-500">위치 접근이 어렵다면?</span>
+                                    <label class="flex items-center gap-2">
+                                        <span class="text-gray-600">동네 선택</span>
+                                        <select id="manual-location-select" class="border rounded px-2 py-1 text-sm">
+                                            <option value="">동네를 골라주세요</option>
+                                            <option value="37.4979,127.0276">서울 강남역</option>
+                                            <option value="37.5575,126.9249">서울 홍대입구</option>
+                                            <option value="37.4021,127.1089">경기 판교</option>
+                                            <option value="35.1576,129.0591">부산 서면</option>
+                                            <option value="35.8714,128.6014">대구 동성로</option>
+                                            <option value="35.1796,129.0756">부산 남포동</option>
+                                        </select>
+                                    </label>
+                                    <button id="apply-manual-location" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-1 rounded-md">이 동네로 보기</button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-center">
+                                <div class="roulette-container">
+                                    <div class="pointer"></div>
+                                    <canvas id="rouletteCanvas"></canvas>
+                                </div>
+                            </div>
+
+                            <div id="winner-card" class="hidden w-full max-w-xl mx-auto bg-slate-50 border border-slate-100 rounded-xl shadow-inner p-5 space-y-3">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <p class="text-sm font-semibold text-green-600">오늘의 당첨!</p>
+                                        <h4 id="winner-name" class="text-2xl font-bold text-gray-800"></h4>
+                                    </div>
+                                    <span id="winner-tag" class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">행운 가득</span>
+                                </div>
+                                <div class="space-y-2 text-sm text-gray-600">
+                                    <p id="winner-address" class="flex items-center gap-2"></p>
+                                    <p id="winner-phone" class="flex items-center gap-2"></p>
+                                    <p id="winner-tip" class="flex items-center gap-2 text-xs text-gray-500"></p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    <a id="winner-map-btn" class="flex-1 text-center bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 rounded-md" target="_blank" rel="noopener">길찾기</a>
+                                    <a id="winner-call-btn" class="flex-1 text-center bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-md" target="_blank" rel="noopener">전화하기</a>
+                                </div>
+                                <button id="winner-reroll" class="w-full bg-gray-900 hover:bg-gray-700 text-white font-bold py-2 rounded-md">다시 돌리기</button>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div data-mode-visible="location" class="mode-hidden">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4 text-left">
+                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <label for="mode-select" class="font-semibold text-gray-700 flex items-center gap-2">
+                                                룰렛 모드
+                                                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">평점/리뷰 기반 추천은 준비 중</span>
+                                            </label>
+                                            <select id="mode-select" class="rounded-md border-gray-300 shadow-sm">
+                                                <option value="mix" selected>🍱 추천 믹스</option>
+                                                <option value="distance">🚶‍♂️ 가까운 순 9곳</option>
+                                                <option value="random">🎲 랜덤 9</option>
+                                            </select>
+                                        </div>
+                                        <button id="resetBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-full shadow-lg">다시 불러오기</button>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap justify-center gap-3">
+                                    <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-10 rounded-full shadow-lg" disabled>START</button>
+                                </div>
+
+                                <div id="save-container" class="hidden">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                        <div class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 gap-2">
+                                            <input type="text" id="roulette-name-input" placeholder="룰렛 이름 입력" class="border rounded px-3 py-2 flex-grow">
+                                            <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md">저장</button>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-3 text-center">마음에 드는 룰렛이 나오면 소장해두고 계속 사용해보세요!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside id="custom-panels" data-mode-visible="custom" class="w-full xl:w-96 space-y-6 mode-hidden">
+                        <div class="bg-white rounded-2xl shadow-lg p-5">
+                            <h3 class="text-xl font-bold text-center mb-2">나의 룰렛 목록</h3>
+                            <div id="saved-roulettes-list" class="h-48 overflow-y-auto custom-scrollbar"></div>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg p-5 space-y-4">
+                            <div class="text-center space-y-1">
+                                <h3 class="text-xl font-bold text-gray-900">📝 직접 차트 만들기</h3>
+                                <p class="text-xs text-gray-500">9칸을 모두 채우지 않아도 괜찮아요. 빈칸은 자동으로 ‘다시 한 번’으로 채워집니다.</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="korean">한식 샘플</button>
+                                <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="noodle">면 요리 샘플</button>
+                                <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="office">직장인 빠른 점심</button>
+                                <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="snack">분식 인기 메뉴</button>
+                            </div>
+                            <div id="custom-chart-inputs" class="grid grid-cols-3 gap-2">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 1">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 2">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 3">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 4">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 5">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 6">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 7">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 8">
+                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 9">
+                            </div>
+                            <button id="apply-custom-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 rounded-md">적용하기</button>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg p-5 space-y-3">
+                            <div class="text-center space-y-1">
+                                <h3 class="text-xl font-bold text-gray-900">👑 룰렛 자랑하기</h3>
+                                <p class="text-xs text-gray-500">좋아요가 많은 순서대로 보여드려요. 싫어요가 많은 글은 운영자가 확인 후 숨깁니다.</p>
+                            </div>
+                            <input type="search" id="search-shared" placeholder="예: (역삼) 족발" class="w-full p-2 border rounded-md">
+                            <div id="shared-roulettes-list" class="h-[430px] overflow-y-auto custom-scrollbar"></div>
+                        </div>
+                    </aside>
                 </div>
             </div>
-
-            <div class="w-full max-w-md bg-white rounded-lg shadow p-4">
-                <h2 class="text-xl font-bold text-center mb-2">나의 룰렛 목록</h2>
-                <div id="saved-roulettes-list" class="h-40 overflow-y-auto custom-scrollbar"></div>
-            </div>
-
-            <!-- 팀플레이 섹션 -->
-            <div id="team-card" class="w-full max-w-md bg-white rounded-lg shadow p-4 mt-6">
-                <h2 class="text-xl font-bold text-center mb-2">🤝 팀플레이</h2>
-                <p class="text-xs text-gray-500 text-center mb-3">같은 엑세스 코드로 접속하면 하나의 룰렛을 함께 채울 수 있어요.</p>
-                <div class="flex flex-col sm:flex-row gap-2 mb-3">
-                    <input id="team-access-input" type="text" placeholder="엑세스 코드 (영문/숫자)" class="border rounded px-3 py-2 text-sm flex-1">
-                    <button id="team-join-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-md">참여하기</button>
-                    <button id="team-leave-btn" class="hidden bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-md">나가기</button>
-                </div>
-                <p id="team-status" class="text-xs text-center text-slate-500 mb-3">엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.</p>
-                <div id="team-slots-container" class="space-y-2 hidden"></div>
-            </div>
-
-            <!-- 직접 차트 만들기 섹션 -->
-            <div class="w-full max-w-md bg-white rounded-lg shadow p-4 mt-6">
-                <h2 class="text-xl font-bold text-center mb-2">📝 직접 차트 만들기</h2>
-                <p class="text-xs text-gray-500 text-center mb-3">9칸을 모두 채우지 않아도 괜찮아요. 빈칸은 자동으로 ‘다시 한 번’으로 채워집니다.</p>
-                <div class="grid grid-cols-2 gap-2 mb-3">
-                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="korean">한식 샘플</button>
-                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="noodle">면 요리 샘플</button>
-                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="office">직장인 빠른 점심</button>
-                    <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="snack">분식 인기 메뉴</button>
-                </div>
-                <div id="custom-chart-inputs" class="grid grid-cols-3 gap-2 mb-3">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 1">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 2">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 3">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 4">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 5">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 6">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 7">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 8">
-                    <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 9">
-                </div>
-                <button id="apply-custom-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 rounded-md">적용하기</button>
-            </div>
-        </div>
-
-        <!-- 자랑하기 게시판 (오른쪽) -->
-        <div class="order-3 w-full bg-white p-4 rounded-lg shadow-lg">
-            <h2 class="text-xl font-bold text-center mb-2">👑 룰렛 자랑하기</h2>
-            <p class="text-xs text-gray-500 text-center mb-3">좋아요가 많은 순서대로 보여드려요. 싫어요가 많은 글은 운영자가 확인 후 숨깁니다.</p>
-            <input type="search" id="search-shared" placeholder="예: (역삼) 족발" class="w-full p-2 border rounded-md mb-4">
-            <div id="shared-roulettes-list" class="h-[430px] overflow-y-auto custom-scrollbar"></div>
-        </div>
-    </main>
+        </section>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -233,7 +353,13 @@
         const teamLeaveBtn = document.getElementById('team-leave-btn');
         const teamStatus = document.getElementById('team-status');
         const teamSlotsContainer = document.getElementById('team-slots-container');
-        
+        const landingScreen = document.getElementById('landing-screen');
+        const appShell = document.getElementById('app-shell');
+        const activeModeBadge = document.getElementById('active-mode-badge');
+        const modeDescription = document.getElementById('mode-description');
+        const modeButtons = document.querySelectorAll('[data-mode-target]');
+        const modeScopedElements = document.querySelectorAll('[data-mode-visible]');
+
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
         const colors = ['#fde68a', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2', '#fef3c7', '#e0f2fe', '#fce7f3', '#e5e7eb'];
@@ -251,7 +377,30 @@
         let teamSlots = Array.from({ length: SEGMENT_COUNT }, () => '');
         let lastTeamSpinTrigger = '';
         let teamSnapshotInitialized = false;
-        
+
+        const Mode = {
+            LOCATION: 'location',
+            TEAM: 'team',
+            CUSTOM: 'custom'
+        };
+
+        const modeMeta = {
+            [Mode.LOCATION]: {
+                badge: '📍 위치기반 모드',
+                description: '현재 위치를 기반으로 주변 식당 후보를 자동으로 채워 드립니다.'
+            },
+            [Mode.TEAM]: {
+                badge: '🤝 팀플레이 모드',
+                description: '엑세스 코드를 공유해 팀원과 함께 룰렛을 채우고 동시에 돌려보세요.'
+            },
+            [Mode.CUSTOM]: {
+                badge: '🎨 커스텀 모드',
+                description: '나만의 후보를 직접 구성하고 저장하거나 자랑해 보세요.'
+            }
+        };
+
+        let currentMode = null;
+
         // --- 초기화 ---
         window.onload = () => {
             const size = Math.min(window.innerWidth * 0.9, 450);
@@ -259,14 +408,86 @@
             canvas.height = size;
             drawWheel();
             initializeFirebase();
-            attemptAutoDiscovery();
         };
 
         function attemptAutoDiscovery() {
+            if (currentMode !== Mode.LOCATION) return;
             statusMessage.textContent = '주변 맛집을 모으는 중이에요...';
+            candidateListsWrapper.innerHTML = '<p class="text-sm text-gray-400 text-center">주변 후보를 불러오는 중이에요...</p>';
             handleReset({ silent: true });
         }
 
+        function updateModeButtons(activeMode) {
+            modeButtons.forEach(button => {
+                const target = button.dataset.modeTarget;
+                const isActive = target === activeMode;
+                button.classList.toggle('mode-button-active', isActive);
+            });
+        }
+
+        function updateModeScopedElements(activeMode) {
+            modeScopedElements.forEach(element => {
+                const availableModes = (element.dataset.modeVisible || '')
+                    .split(',')
+                    .map(mode => mode.trim())
+                    .filter(Boolean);
+                const shouldShow = availableModes.includes(activeMode);
+                element.classList.toggle('mode-hidden', !shouldShow);
+            });
+        }
+
+        function setMode(mode) {
+            if (!modeMeta[mode]) return;
+            const previousMode = currentMode;
+            const isSameMode = previousMode === mode;
+            currentMode = mode;
+
+            landingScreen.classList.add('hidden');
+            appShell.classList.remove('hidden');
+
+            updateModeButtons(mode);
+            updateModeScopedElements(mode);
+
+            const meta = modeMeta[mode];
+            activeModeBadge.textContent = meta.badge;
+            modeDescription.textContent = meta.description;
+
+            if (isSameMode) {
+                if (mode === Mode.LOCATION) {
+                    attemptAutoDiscovery();
+                }
+                return;
+            }
+
+            if (mode === Mode.LOCATION) {
+                if (teamMode) {
+                    leaveTeamMode({ silent: true });
+                }
+                attemptAutoDiscovery();
+            } else if (mode === Mode.TEAM) {
+                if (!teamMode) {
+                    resetState(true);
+                    statusMessage.textContent = '엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.';
+                }
+            } else if (mode === Mode.CUSTOM) {
+                if (teamMode) {
+                    leaveTeamMode({ silent: true });
+                }
+                if (previousMode !== Mode.CUSTOM) {
+                    resetState(true);
+                    if (!restaurants.length) {
+                        statusMessage.textContent = '나만의 룰렛을 만들어 보세요.';
+                    }
+                }
+            }
+
+            if (mode !== Mode.LOCATION) {
+                locationFallback.classList.add('hidden');
+            }
+
+            updateStartButtonState();
+        }
+        
         const textEscapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
         function safeText(text = '') {
             return String(text).replace(/[&<>"']/g, char => textEscapes[char] || char);
@@ -388,7 +609,6 @@
             teamSlots = Array.from({ length: SEGMENT_COUNT }, (_, idx) => (slots[idx] || ''));
             restaurants = teamSlots.map((slot, index) => createTeamEntry(index, slot));
             candidateListsWrapper.innerHTML = '';
-            restaurantListContainer.classList.add('hidden');
             saveContainer.classList.add('hidden');
             drawWheel();
             updateTeamSlotsUI(teamSlots);
@@ -557,7 +777,8 @@
             animateSpin(rotation, targetIndex, { triggeredByTeam: true });
         }
 
-        function leaveTeamMode() {
+        function leaveTeamMode(options = {}) {
+            const { silent = false } = options;
             if (teamUnsubscribe) {
                 teamUnsubscribe();
                 teamUnsubscribe = null;
@@ -571,12 +792,17 @@
             winnerIndex = -1;
             canvas.classList.remove('blinking');
             updateTeamUIState();
-            resetState();
-            attemptAutoDiscovery();
-            statusMessage.textContent = '팀플레이 모드에서 나왔어요. 주변 맛집을 다시 찾는 중입니다.';
+            resetState(true);
+            if (!silent) {
+                statusMessage.textContent = '팀에서 나왔어요. 새로운 엑세스 코드를 입력해 보세요.';
+            }
+            updateStartButtonState();
         }
 
         // --- 이벤트 리스너 ---
+        modeButtons.forEach(button => {
+            button.addEventListener('click', () => setMode(button.dataset.modeTarget));
+        });
         resetBtn.addEventListener('click', () => handleReset());
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);
@@ -592,6 +818,10 @@
         applyManualLocationBtn.addEventListener('click', () => {
             if (teamMode) {
                 statusMessage.textContent = '팀플레이 모드에서는 주변 식당 불러오기를 사용할 수 없어요.';
+                return;
+            }
+            if (currentMode !== Mode.LOCATION) {
+                statusMessage.textContent = '위치기반 모드에서만 사용할 수 있는 기능이에요.';
                 return;
             }
             const value = manualLocationSelect.value;
@@ -666,6 +896,10 @@
                 clearTeamSlots().finally(() => updateStartButtonState());
                 return;
             }
+            if (currentMode !== Mode.LOCATION) {
+                statusMessage.textContent = '위치기반 모드에서만 다시 불러올 수 있어요.';
+                return;
+            }
             const { silent = false } = options;
             resetState(silent);
             if (!silent) {
@@ -685,7 +919,7 @@
             startBtn.disabled = true;
             resetBtn.disabled = true;
             saveContainer.classList.add('hidden');
-            restaurantListContainer.classList.add('hidden');
+            candidateListsWrapper.innerHTML = '';
             restaurants = [];
             winnerIndex = -1;
             canvas.style.transition = 'none';
@@ -954,7 +1188,6 @@
             rouletteNameInput.value = '';
             drawWheel();
             candidateListsWrapper.innerHTML = listHtml;
-            restaurantListContainer.classList.remove('hidden');
             locationFallback.classList.add('hidden');
         }
 

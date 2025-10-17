@@ -1734,6 +1734,7 @@
             if (data.spin && data.spin.triggerId) {
                 if (!teamSnapshotInitialized) {
                     lastTeamSpinTrigger = data.spin.triggerId;
+                    triggerTeamSpinFromSnapshot(data.spin, { immediate: true });
                 } else if (data.spin.triggerId !== lastTeamSpinTrigger) {
                     lastTeamSpinTrigger = data.spin.triggerId;
                     triggerTeamSpinFromSnapshot(data.spin);
@@ -1742,12 +1743,12 @@
             teamSnapshotInitialized = true;
         }
 
-        function triggerTeamSpinFromSnapshot(spinState = {}) {
+        function triggerTeamSpinFromSnapshot(spinState = {}, options = {}) {
             const rotation = Number(spinState.totalRotation) || 0;
             const targetIndex = typeof spinState.winnerIndex === 'number'
                 ? spinState.winnerIndex
                 : calculateWinnerIndex(rotation);
-            animateSpin(rotation, targetIndex, { triggeredByTeam: true });
+            animateSpin(rotation, targetIndex, { triggeredByTeam: true, ...options });
         }
 
         function leaveTeamMode(options = {}) {
@@ -1926,49 +1927,63 @@
             return Math.round(winningAngle / segmentAngle) % segmentCount;
         }
 
-        function animateSpin(totalRotation, forcedIndex = null) {
-            isSpinning = true;
+        function animateSpin(totalRotation, forcedIndex = null, options = {}) {
+            const { immediate = false } = options;
+
             saveContainer.classList.add('hidden');
             canvas.classList.remove('blinking');
             if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
             winnerCard.classList.add('hidden');
             updateStartButtonState();
 
+            if (immediate) {
+                isSpinning = false;
+                canvas.style.transition = 'none';
+                canvas.style.transform = `rotate(${totalRotation}deg)`;
+                finalizeSpin(totalRotation, forcedIndex);
+                return;
+            }
+
+            isSpinning = true;
             canvas.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.3, 1)';
             canvas.style.transform = `rotate(${totalRotation}deg)`;
 
             setTimeout(() => {
                 isSpinning = false;
-                const targetIndex = typeof forcedIndex === 'number' ? forcedIndex : calculateWinnerIndex(totalRotation);
-                winnerIndex = targetIndex;
-                const winner = restaurants[winnerIndex];
-                updateStartButtonState();
-
-                if (!winner || (winner.isTeamEntry && (winner.rawText || '').trim() === '')) {
-                    statusMessage.textContent = '아직 비어 있는 칸에 멈췄어요. 내용을 채워볼까요?';
-                    winnerCard.classList.add('hidden');
-                    startBlinking();
-                    return;
-                }
-
-                if (!teamMode && winner.id === 'reroll') {
-                    statusMessage.innerHTML = `아쉽네요! <span class="font-bold text-red-600">다시 한 번!</span>`;
-                    winnerCard.classList.add('hidden');
-                    startBlinking();
-                    return;
-                }
-
-                if (teamMode && winner.isTeamEntry) {
-                    const displayName = safeText((winner.rawText || winner.place_name));
-                    statusMessage.innerHTML = `팀 룰렛 결과는 <span class="font-bold text-emerald-600">${displayName}</span>!`;
-                } else {
-                    statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${safeText(winner.place_name)}</a>!`;
-                }
-
-                populateWinnerCard(winner);
-                winnerCard.classList.remove('hidden');         
-                startBlinking();
+                finalizeSpin(totalRotation, forcedIndex);
             }, 5000);
+        }
+
+        function finalizeSpin(totalRotation, forcedIndex = null) {
+            const targetIndex = typeof forcedIndex === 'number' ? forcedIndex : calculateWinnerIndex(totalRotation);
+            winnerIndex = targetIndex;
+            const winner = restaurants[winnerIndex];
+            updateStartButtonState();
+
+            if (!winner || (winner.isTeamEntry && (winner.rawText || '').trim() === '')) {
+                statusMessage.textContent = '아직 비어 있는 칸에 멈췄어요. 내용을 채워볼까요?';
+                winnerCard.classList.add('hidden');
+                startBlinking();
+                return;
+            }
+
+            if (!teamMode && winner.id === 'reroll') {
+                statusMessage.innerHTML = `아쉽네요! <span class="font-bold text-red-600">다시 한 번!</span>`;
+                winnerCard.classList.add('hidden');  
+                startBlinking();
+                return;
+            }
+
+            if (teamMode && winner.isTeamEntry) {
+                const displayName = safeText((winner.rawText || winner.place_name));
+                statusMessage.innerHTML = `팀 룰렛 결과는 <span class="font-bold text-emerald-600">${displayName}</span>!`;
+            } else {
+                statusMessage.innerHTML = `오늘의 식사는 <a href="${winner.place_url || '#'}" target="_blank" class="font-bold text-blue-600 underline">${safeText(winner.place_name)}</a>!`;
+            }
+
+            populateWinnerCard(winner);
+            winnerCard.classList.remove('hidden');
+            startBlinking();
         }
 
         async function handleStart() {

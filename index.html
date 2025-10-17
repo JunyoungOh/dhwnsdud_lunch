@@ -73,6 +73,10 @@
         #landing-screen {
             background: linear-gradient(135deg, #fef9c3, #e0f2fe);
         }
+        #landing-screen-mobile {
+            display: none;
+            background: linear-gradient(165deg, #fef3c7, #bfdbfe);
+        }
         .mode-button-location {
             background: linear-gradient(135deg, rgba(254, 243, 199, 0.95), rgba(253, 230, 138, 0.95));
             box-shadow: 0 18px 40px -20px rgba(217, 119, 6, 0.65);
@@ -157,6 +161,14 @@
             filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
             pointer-events: none;
         }
+        @media (max-width: 640px) {
+            #landing-screen {
+                display: none;
+            }
+            #landing-screen-mobile {
+                display: flex;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -203,6 +215,52 @@
                 </div>
             </div>
             
+        </section>
+
+        <section id="landing-screen-mobile" class="flex-1 flex flex-col px-4 py-12 space-y-8 text-center">
+            <div class="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl space-y-4">
+                <p class="text-xs font-semibold tracking-[0.4em] text-indigo-600">오늘 뭐 먹지?</p>
+                <h1 class="text-3xl font-bold text-slate-900">휴대폰에서도 간편하게<br>점심 메뉴를 골라보세요</h1>
+                <p class="text-sm text-slate-600 leading-relaxed">상황에 맞는 네 가지 모드를 눌러 바로 시작할 수 있어요. 추천 메뉴와 함께 가벼운 설명을 곁들였어요.</p>
+            </div>
+            <div class="space-y-4">
+                <button class="mode-button mode-button-location flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="location">
+                    <div class="flex-1 text-left">
+                        <p class="text-sm font-semibold text-amber-500">MODE 01</p>
+                        <p class="text-xl font-bold text-slate-900 mt-1">📍 위치기반</p>
+                        <p class="text-sm text-slate-600 mt-1">현재 위치를 기반으로 근처 맛집을 추천 받아요.</p>
+                    </div>
+                    <span class="text-2xl text-slate-300">➜</span>
+                </button>
+                <button class="mode-button mode-button-team flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="team">
+                    <div class="flex-1 text-left">
+                        <p class="text-sm font-semibold text-emerald-500">MODE 02</p>
+                        <p class="text-xl font-bold text-slate-900 mt-1">🤝 팀플레이</p>
+                        <p class="text-sm text-slate-600 mt-1">같은 코드를 입력하면 팀원들과 메뉴를 함께 채워요.</p>
+                    </div>
+                    <span class="text-2xl text-slate-300">➜</span>
+                </button>
+                <button class="mode-button mode-button-custom flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="custom">
+                    <div class="flex-1 text-left">
+                        <p class="text-sm font-semibold text-indigo-500">MODE 03</p>
+                        <p class="text-xl font-bold text-slate-900 mt-1">🎨 커스텀</p>
+                        <p class="text-sm text-slate-600 mt-1">먹고 싶은 메뉴를 직접 입력해 나만의 룰렛을 만들어요.</p>
+                    </div>
+                    <span class="text-2xl text-slate-300">➜</span>
+                </button>
+                <button class="mode-button mode-button-race flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="race">
+                    <div class="flex-1 text-left">
+                        <p class="text-sm font-semibold text-rose-500">MODE 04</p>
+                        <p class="text-xl font-bold text-slate-900 mt-1">🏇 커피 내기</p>
+                        <p class="text-sm text-slate-600 mt-1">말을 선택하고 레이스를 달려 승자를 가볍게 정해요.</p>
+                    </div>
+                    <span class="text-2xl text-slate-300">➜</span>
+                </button>
+            </div>
+            <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-left space-y-3">
+                <p class="text-sm font-semibold text-slate-700 flex items-center"><span class="text-lg mr-2">💡</span>모바일 팁</p>
+                <p class="text-sm text-slate-600 leading-relaxed">룰렛 결과는 하단 카드에서 바로 확인할 수 있고, 전화걸기와 길찾기도 모바일에서 바로 실행돼요.</p>
+            </div>
         </section>
 
         <section id="app-shell" class="hidden flex-1 px-4 py-10">

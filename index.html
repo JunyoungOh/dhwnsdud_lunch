@@ -236,6 +236,11 @@
                                 <button id="team-leave-btn" class="hidden bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-md">나가기</button>
                             </div>
                             <p id="team-status" class="text-xs text-center text-slate-500">엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.</p>
+                            <div class="flex flex-col items-center gap-1 text-xs text-slate-500">
+                                <label for="team-slot-count" class="font-semibold text-gray-600">룰렛 칸 수</label>
+                                <input id="team-slot-count" type="number" min="2" max="9" value="9" disabled class="w-20 border rounded px-2 py-1 text-sm text-center opacity-60 cursor-not-allowed">
+                                <p class="text-[11px] text-slate-400">최소 2칸 · 최대 9칸</p>
+                            </div>
                             <div id="team-slots-container" class="space-y-2 hidden"></div>
                         </div>
 
@@ -406,7 +411,17 @@
                         <div class="bg-white rounded-2xl shadow-lg p-5 space-y-4">
                             <div class="text-center space-y-1">
                                 <h3 class="text-xl font-bold text-gray-900">📝 직접 차트 만들기</h3>
-                                <p class="text-xs text-gray-500">9칸을 모두 채우지 않아도 괜찮아요. 빈칸은 자동으로 ‘다시 한 번’으로 채워집니다.</p>
+                                <p class="text-xs text-gray-500">원하는 칸 수(최소 2칸 ~ 최대 9칸)로 자유롭게 채워보세요. 비어 있는 칸은 자동으로 ‘다시 한 번’으로 채워집니다.</p>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between text-sm font-semibold text-slate-700">
+                                    <span>룰렛 칸 수</span>
+                                    <div class="flex items-center gap-2">
+                                        <input id="custom-slot-count" type="range" min="2" max="9" value="9" class="w-32">
+                                        <span id="custom-slot-count-display" class="text-xs text-slate-500">9칸</span>
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-slate-400 text-right">슬라이더를 움직여 칸 수를 조절하세요.</p>
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="korean">한식 샘플</button>
@@ -414,17 +429,7 @@
                                 <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="office">직장인 빠른 점심</button>
                                 <button class="sample-template-btn bg-slate-200 hover:bg-slate-300 text-gray-700 text-sm font-semibold py-2 rounded" data-template="snack">분식 인기 메뉴</button>
                             </div>
-                            <div id="custom-chart-inputs" class="grid grid-cols-3 gap-2">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 1">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 2">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 3">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 4">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 5">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 6">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 7">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 8">
-                                <input type="text" class="custom-input border rounded px-2 py-1 text-sm" placeholder="항목 9">
-                            </div>
+                            <div id="custom-chart-inputs" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                             <button id="apply-custom-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 rounded-md">적용하기</button>
                         </div>
                         <div class="bg-white rounded-2xl shadow-lg p-5 space-y-3">
@@ -504,9 +509,16 @@
         const startBtnWrapper = document.getElementById('start-btn-wrapper');
         const resetBtnWrapper = document.getElementById('reset-btn-wrapper');
         const raceSummaryNodes = document.querySelectorAll('[data-race-summary]');
+        const teamSlotCountInput = document.getElementById('team-slot-count');
+        const customSlotCountInput = document.getElementById('custom-slot-count');
+        const customSlotCountDisplay = document.getElementById('custom-slot-count-display');
+        const customChartInputs = document.getElementById('custom-chart-inputs');
 
         // --- 전역 변수 ---
-        const SEGMENT_COUNT = 9;
+        const MIN_SEGMENT_COUNT = 2;
+        const MAX_SEGMENT_COUNT = 9;
+        const DEFAULT_SEGMENT_COUNT = 9;
+        let segmentCount = DEFAULT_SEGMENT_COUNT;
         const colors = ['#fde68a', '#dcfce7', '#dbeafe', '#f3e8ff', '#fee2e2', '#fef3c7', '#e0f2fe', '#fce7f3', '#e5e7eb'];
         let restaurants = [];
         let isSpinning = false;
@@ -519,9 +531,10 @@
         let teamCode = '';
         let teamDocRef = null;
         let teamUnsubscribe = null;
-        let teamSlots = Array.from({ length: SEGMENT_COUNT }, () => '');
+        let teamSlots = Array.from({ length: segmentCount }, () => '');
         let lastTeamSpinTrigger = '';
         let teamSnapshotInitialized = false;
+        let customSegmentCount = DEFAULT_SEGMENT_COUNT;
         const startBtnDefaultLabel = startBtn ? startBtn.textContent.trim() : 'START';
         const resetBtnDefaultLabel = resetBtn ? resetBtn.textContent.trim() : 'RESET';
 
@@ -574,6 +587,43 @@
         };
 
         let currentMode = null;
+
+        function clampSegmentCount(value) {
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric)) {
+                return DEFAULT_SEGMENT_COUNT;
+            }
+            return Math.max(MIN_SEGMENT_COUNT, Math.min(MAX_SEGMENT_COUNT, Math.round(numeric)));
+        }
+
+        function syncTeamSlotCountInput(value) {
+            if (teamSlotCountInput) {
+                teamSlotCountInput.value = value;
+            }
+        }
+
+        function syncCustomSlotCountDisplay(value) {
+            if (customSlotCountDisplay) {
+                customSlotCountDisplay.textContent = `${value}칸`;
+            }
+        }
+
+        function renderCustomInputs(existingValues = []) {
+            if (!customChartInputs) return;
+            customChartInputs.innerHTML = '';
+            for (let i = 0; i < customSegmentCount; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'custom-input border rounded px-2 py-1 text-sm';
+                input.placeholder = `항목 ${i + 1}`;
+                input.value = existingValues[i] || '';
+                customChartInputs.appendChild(input);
+            }
+        }
+
+        syncCustomSlotCountDisplay(customSegmentCount);
+        renderCustomInputs();
+        syncTeamSlotCountInput(segmentCount);
 
         // --- 초기화 ---
         window.onload = () => {
@@ -1147,6 +1197,22 @@
             activeModeBadge.textContent = meta.badge;
             modeDescription.textContent = meta.description;
 
+            if (mode === Mode.CUSTOM) {
+                segmentCount = customSegmentCount;
+                if (customSlotCountInput) {
+                    customSlotCountInput.value = customSegmentCount;
+                }
+                syncCustomSlotCountDisplay(customSegmentCount);
+                drawWheel();
+            } else if (mode === Mode.LOCATION || mode === Mode.RACE || (mode === Mode.TEAM && !teamMode)) {
+                segmentCount = DEFAULT_SEGMENT_COUNT;
+                drawWheel();
+            }
+
+            if (!teamMode || mode !== Mode.TEAM) {
+                syncTeamSlotCountInput(segmentCount);
+            }
+
             if (isSameMode) {
                 if (mode === Mode.LOCATION) {
                     attemptAutoDiscovery();
@@ -1232,7 +1298,7 @@
                 startBtn.disabled = isSpinning || !allFilled;
                 resetBtn.disabled = isSpinning;
             } else {
-                startBtn.disabled = isSpinning || restaurants.length < SEGMENT_COUNT;
+                startBtn.disabled = isSpinning || restaurants.length < segmentCount;
                 resetBtn.disabled = isSpinning;
             }
         }
@@ -1279,12 +1345,23 @@
                 teamLeaveBtn.classList.remove('hidden');
                 teamSlotsContainer.classList.remove('hidden');
                 teamAccessInput.value = teamCode;
+                syncTeamSlotCountInput(segmentCount);
             } else {
                 teamJoinBtn.classList.remove('hidden');
                 teamLeaveBtn.classList.add('hidden');
                 teamSlotsContainer.classList.add('hidden');
                 teamAccessInput.value = '';
                 teamStatus.textContent = '엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.';
+                segmentCount = currentMode === Mode.CUSTOM ? customSegmentCount : DEFAULT_SEGMENT_COUNT;
+                syncTeamSlotCountInput(segmentCount);
+                drawWheel();
+                updateStartButtonState();
+            }
+            if (teamSlotCountInput) {
+                const disabled = !teamMode;
+                teamSlotCountInput.disabled = disabled;
+                teamSlotCountInput.classList.toggle('opacity-60', disabled);
+                teamSlotCountInput.classList.toggle('cursor-not-allowed', disabled);
             }
         }
 
@@ -1338,9 +1415,12 @@
             });
         }
 
-        function applyTeamSlotsToRestaurants(slots = []) {
+        function applyTeamSlotsToRestaurants(slots = [], count = segmentCount) {
             if (!teamMode) return;
-            teamSlots = Array.from({ length: SEGMENT_COUNT }, (_, idx) => (slots[idx] || ''));
+            const normalizedCount = clampSegmentCount(count);
+            segmentCount = normalizedCount;
+            const normalizedSlots = Array.from({ length: normalizedCount }, (_, idx) => (slots[idx] || ''));
+            teamSlots = normalizedSlots;
             restaurants = teamSlots.map((slot, index) => createTeamEntry(index, slot));
             candidateListsWrapper.innerHTML = '';
             saveContainer.classList.add('hidden');
@@ -1348,13 +1428,14 @@
             updateTeamSlotsUI(teamSlots);
 
             const filledCount = teamSlots.filter(slot => slot.trim() !== '').length;
-            if (filledCount === SEGMENT_COUNT) {
+            syncTeamSlotCountInput(normalizedCount);
+            if (filledCount === normalizedCount) {
                 teamStatus.textContent = '모든 칸이 채워졌어요! 이제 START 버튼으로 함께 돌려보세요.';
                 if (winnerIndex === -1 && !isSpinning) {
                     statusMessage.textContent = '팀 룰렛이 준비되었습니다! START 버튼을 누르면 모두가 동시에 볼 수 있어요.';
                 }
             } else {
-                teamStatus.textContent = `${filledCount}/${SEGMENT_COUNT}칸 채워졌어요. 모두 채우면 START 버튼이 활성화됩니다.`;
+                teamStatus.textContent = `${filledCount}/${normalizedCount}칸 채워졌어요. 모두 채우면 START 버튼이 활성화됩니다.`;
                 if (winnerIndex === -1 && !isSpinning) {
                     statusMessage.textContent = '팀 룰렛을 채우는 중이에요. 팀원들과 함께 각 칸을 작성해 주세요.';
                 }
@@ -1368,10 +1449,14 @@
             try {
                 const snap = await getDoc(teamDocRef);
                 const data = snap.exists() ? snap.data() : {};
-                const slots = Array.isArray(data.slots)
-                    ? [...data.slots]
-                    : Array.from({ length: SEGMENT_COUNT }, () => '');
+                const slots = Array.from({ length: segmentCount }, (_, idx) => {
+                    if (Array.isArray(data.slots)) {
+                        return data.slots[idx] || '';
+                    }
+                    return '';
+                });
 
+                if (index >= slots.length) return;
                 slots[index] = trimmed;
 
                 await setDoc(
@@ -1389,11 +1474,63 @@
             }
         }
 
+        function handleTeamSlotCountChange() {
+            if (!teamSlotCountInput) return;
+            const desiredCount = clampSegmentCount(teamSlotCountInput.value);
+            syncTeamSlotCountInput(desiredCount);
+            if (!teamMode || !teamDocRef) {
+                segmentCount = desiredCount;
+                drawWheel();
+                updateStartButtonState();
+                return;
+            }
+            updateTeamSegmentCount(desiredCount);
+        }
+
+        async function updateTeamSegmentCount(newCount) {
+            if (!teamMode || !teamDocRef) return;
+            const clamped = clampSegmentCount(newCount);
+            const previousCount = segmentCount;
+            const previousSlots = [...teamSlots];
+            const normalizedSlots = Array.from({ length: clamped }, (_, idx) => teamSlots[idx] || '');
+            applyTeamSlotsToRestaurants(normalizedSlots, clamped);
+
+            let wasDisabled = false;
+            if (teamSlotCountInput) {
+                wasDisabled = teamSlotCountInput.disabled;
+                teamSlotCountInput.disabled = true;
+                teamSlotCountInput.classList.add('opacity-60');
+                teamSlotCountInput.classList.add('cursor-not-allowed');
+            }
+
+            try {
+                await setDoc(teamDocRef, {
+                    segmentCount: clamped,
+                    slots: normalizedSlots,
+                    updatedAt: serverTimestamp(),
+                    lastUpdatedBy: userId || null
+                }, { merge: true });
+            } catch (error) {
+                console.error('팀 칸 수 변경 실패:', error);
+                statusMessage.textContent = '팀 칸 수를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+                applyTeamSlotsToRestaurants(previousSlots, previousCount);
+                syncTeamSlotCountInput(previousCount);
+            } finally {
+                if (teamSlotCountInput) {
+                    const disabled = !teamMode || wasDisabled;
+                    teamSlotCountInput.disabled = disabled;
+                    teamSlotCountInput.classList.toggle('opacity-60', disabled);
+                    teamSlotCountInput.classList.toggle('cursor-not-allowed', disabled);
+                }
+            }
+        }
+
         async function clearTeamSlots() {
             if (!teamMode || !teamDocRef) return;
             try {
                 await setDoc(teamDocRef, {
-                    slots: Array.from({ length: SEGMENT_COUNT }, () => '')
+                    slots: Array.from({ length: segmentCount }, () => ''),
+                    segmentCount
                 }, { merge: true });
                 winnerIndex = -1;
                 canvas.classList.remove('blinking');
@@ -1444,7 +1581,11 @@
             resetState(true);
             canvas.classList.remove('blinking');
             winnerIndex = -1;
-
+            segmentCount = DEFAULT_SEGMENT_COUNT;
+            syncTeamSlotCountInput(segmentCount);
+            drawWheel();
+            updateStartButtonState();
+            
             teamMode = true;
             teamCode = code;
             teamAccessInput.value = code;
@@ -1468,7 +1609,8 @@
                 const docSnap = await getDoc(teamDocRef);
                 if (!docSnap.exists()) {
                     await setDoc(teamDocRef, {
-                        slots: Array.from({ length: SEGMENT_COUNT }, () => ''),
+                        slots: Array.from({ length: DEFAULT_SEGMENT_COUNT }, () => ''),
+                        segmentCount: DEFAULT_SEGMENT_COUNT,
                         createdAt: serverTimestamp()
                     });
                 }
@@ -1490,7 +1632,24 @@
             if (!docSnap.exists()) return;
             const data = docSnap.data() || {};
             const slots = Array.isArray(data.slots) ? data.slots : [];
-            applyTeamSlotsToRestaurants(slots);
+            const sanitizedCount = clampSegmentCount(
+                typeof data.segmentCount === 'undefined' ? DEFAULT_SEGMENT_COUNT : data.segmentCount
+            );
+            const normalizedSlots = Array.from({ length: sanitizedCount }, (_, idx) => slots[idx] || '');
+            const rawNumber = Number(data.segmentCount);
+            const requiresPatch = !Number.isFinite(rawNumber)
+                || rawNumber < MIN_SEGMENT_COUNT
+                || rawNumber > MAX_SEGMENT_COUNT
+                || !Number.isInteger(rawNumber);
+
+            if (requiresPatch && teamDocRef) {
+                setDoc(teamDocRef, {
+                    segmentCount: sanitizedCount,
+                    slots: normalizedSlots
+                }, { merge: true }).catch(error => console.error('팀 칸 수 보정 실패:', error));
+            }
+
+            applyTeamSlotsToRestaurants(normalizedSlots, sanitizedCount);
 
             if (data.spin && data.spin.triggerId) {
                 if (!teamSnapshotInitialized) {
@@ -1520,11 +1679,13 @@
             teamMode = false;
             teamCode = '';
             teamDocRef = null;
-            teamSlots = Array.from({ length: SEGMENT_COUNT }, () => '');
+            segmentCount = currentMode === Mode.CUSTOM ? customSegmentCount : DEFAULT_SEGMENT_COUNT;
+            teamSlots = Array.from({ length: segmentCount }, () => '');
             lastTeamSpinTrigger = '';
             teamSnapshotInitialized = false;
             winnerIndex = -1;
             canvas.classList.remove('blinking');
+            syncTeamSlotCountInput(segmentCount);
             updateTeamUIState();
             resetState(true);
             if (!silent) {
@@ -1548,11 +1709,13 @@
         raceAgainBtn?.addEventListener('click', () => resetRaceMode({ keepSelection: true }));
         teamJoinBtn.addEventListener('click', joinTeamRoom);
         teamLeaveBtn.addEventListener('click', () => leaveTeamMode());
+        teamSlotCountInput?.addEventListener('change', handleTeamSlotCountChange);
         teamAccessInput.addEventListener('keyup', (event) => {
             if (event.key === 'Enter') {
                 joinTeamRoom();
             }
         });
+        customSlotCountInput?.addEventListener('input', handleCustomSlotCountChange);
         applyManualLocationBtn.addEventListener('click', () => {
             if (teamMode) {
                 statusMessage.textContent = '팀플레이 모드에서는 주변 식당 불러오기를 사용할 수 없어요.';
@@ -1584,13 +1747,13 @@
         // --- 렌더링 함수 ---
         function drawWheel() {
             const radius = canvas.width / 2;
-            const segmentAngle = (2 * Math.PI) / SEGMENT_COUNT;
+            const segmentAngle = (2 * Math.PI) / segmentCount;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.save();
             ctx.translate(radius, radius);
 
-            for (let i = 0; i < SEGMENT_COUNT; i++) {
+            for (let i = 0; i < segmentCount; i++) {
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
                 const startAngle = segmentAngle * i - segmentAngle / 2;
@@ -1678,9 +1841,9 @@
 
         function calculateWinnerIndex(totalRotation) {
             const normalized = ((totalRotation % 360) + 360) % 360;
-            const segmentAngle = 360 / SEGMENT_COUNT;
+            const segmentAngle = 360 / segmentCount;
             const winningAngle = (270 - normalized + 360) % 360;
-            return Math.round(winningAngle / segmentAngle) % SEGMENT_COUNT;
+            return Math.round(winningAngle / segmentAngle) % segmentCount;
         }
 
         function animateSpin(totalRotation, forcedIndex = null) {
@@ -1776,7 +1939,7 @@
                 return;
             }
 
-            if (restaurants.length < SEGMENT_COUNT) return;
+            if (restaurants.length < segmentCount) return;
 
             const randomSpins = Math.floor(Math.random() * 5) + 5;
             const randomStopAngle = Math.random() * 360;
@@ -1923,11 +2086,11 @@
             }
             
             const rerollOption = { place_name: '다시 한 번', id: 'reroll', place_url: '#' };
-            while (placesForRoulette.length < SEGMENT_COUNT) {
+            while (placesForRoulette.length < segmentCount) {
                 placesForRoulette.push(rerollOption);
             }
 
-            restaurants = placesForRoulette.slice(0, SEGMENT_COUNT);
+            restaurants = placesForRoulette.slice(0, segmentCount);
             statusMessage.textContent = source === 'manual' ? '선택한 동네의 후보가 준비되었어요! START를 눌러주세요.' : '룰렛이 준비되었습니다! START 버튼을 누르세요.';
             updateStartButtonState();
             saveContainer.classList.remove('hidden');
@@ -1935,6 +2098,27 @@
             drawWheel();
             candidateListsWrapper.innerHTML = listHtml;
             locationFallback.classList.add('hidden');
+        }
+
+        function handleCustomSlotCountChange() {
+            if (!customSlotCountInput) return;
+            const desiredCount = clampSegmentCount(customSlotCountInput.value);
+            customSegmentCount = desiredCount;
+            customSlotCountInput.value = desiredCount;
+            syncCustomSlotCountDisplay(desiredCount);
+            const existingValues = Array.from(document.querySelectorAll('.custom-input')).map(input => input.value);
+            renderCustomInputs(existingValues);
+            if (teamMode) return;
+            segmentCount = desiredCount;
+            restaurants = [];
+            winnerIndex = -1;
+            canvas.classList.remove('blinking');
+            drawWheel();
+            updateStartButtonState();
+            winnerCard.classList.add('hidden');
+            if (currentMode === Mode.CUSTOM) {
+                statusMessage.textContent = '칸 수가 변경되었습니다. 새로운 구성을 적용해 보세요.';
+            }
         }
 
         function handleApplyCustomChart() {
@@ -2104,9 +2288,17 @@
                 if (docSnap.exists()) {
                     const rouletteData = docSnap.data();
                     resetState();
-                    restaurants = rouletteData.restaurants;
+                    const loadedRestaurants = Array.isArray(rouletteData.restaurants) ? rouletteData.restaurants : [];
+                    const loadedCount = clampSegmentCount(loadedRestaurants.length || customSegmentCount);
+                    customSegmentCount = loadedCount;
+                    segmentCount = loadedCount;
+                    if (customSlotCountInput) {
+                        customSlotCountInput.value = loadedCount;
+                    }
+                    syncCustomSlotCountDisplay(loadedCount);
+                    renderCustomInputs(loadedRestaurants.map(item => item.place_name || ''));
                     statusMessage.textContent = `'${rouletteData.name}' 룰렛을 적용했습니다.`;
-                    processRestaurantData(restaurants, rouletteData.name);
+                    processRestaurantData(loadedRestaurants, rouletteData.name);
                     drawWheel();
                     updateStartButtonState();
                 }

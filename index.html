@@ -110,7 +110,13 @@
             <div class="max-w-2xl mx-auto space-y-10">
                 <div class="space-y-3">
                     <h1 class="text-4xl sm:text-5xl font-bold text-gray-900">오늘 뭐 먹지?</h1>
-                    <p class="text-gray-600 text-base sm:text-lg">세 가지 방식으로 점심 고민을 단번에 해결해 보세요.</p>
+                    <p class="text-gray-600 text-base sm:text-lg">네 가지 방식으로 점심 고민을 단번에 해결해 보세요.</p>
+                </div>
+                <div class="grid sm:grid-cols-2 gap-3" data-race-summary>
+                    <div class="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                        <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide">커피 내기 경마 통계</p>
+                        <p class="mt-2 text-sm text-slate-600">레이스를 시작하면 여기에서 우승 기록을 확인할 수 있어요.</p>
+                    </div>
                 </div>
                 <div class="grid gap-4">
                     <button class="mode-button flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent bg-white text-left shadow-sm" data-mode-target="location">
@@ -134,6 +140,14 @@
                             <span class="mode-button-badge">MODE 03</span>
                             <p class="mode-button-title">🎨 커스텀 모드</p>
                             <p class="mode-button-subtitle">나만의 룰렛을 직접 만들고 자랑해 보세요.</p>
+                        </div>
+                        <span class="mode-button-arrow">➜</span>
+                    </button>
+                    <button class="mode-button flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent bg-white text-left shadow-sm" data-mode-target="race">
+                        <div class="space-y-2">
+                            <span class="mode-button-badge">MODE 04</span>
+                            <p class="mode-button-title">🏇 커피 내기 경마</p>
+                            <p class="mode-button-subtitle">즐겨 찾는 말들을 선택하고 레이스로 커피 내기 우승자를 정해요.</p>
                         </div>
                         <span class="mode-button-arrow">➜</span>
                     </button>
@@ -162,6 +176,9 @@
                         <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="custom">
                             <span class="mode-tab-label">🎨 커스텀</span>
                         </button>
+                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="race">
+                            <span class="mode-tab-label">🏇 경마</span>
+                        </button>
                     </div>
                 </div>
                 <div class="flex flex-col xl:flex-row gap-6">
@@ -187,10 +204,20 @@
                             <p id="team-status" class="text-xs text-center text-slate-500">엑세스 코드를 입력하면 팀이 생성되거나 입장됩니다.</p>
                             <div id="team-slots-container" class="space-y-2 hidden"></div>
                         </div>
+
+                        <div id="race-summary-card" data-mode-visible="race" class="bg-white rounded-2xl shadow-lg p-5 space-y-4 mode-hidden">
+                            <div class="text-center space-y-1">
+                                <h3 class="text-xl font-bold text-gray-900">🏆 우승 기록</h3>
+                                <p class="text-xs text-gray-500">가장 많이 우승한 말들을 확인하세요.</p>
+                            </div>
+                            <div class="space-y-3" data-race-summary>
+                                <p class="text-sm text-slate-500">아직 경마 기록이 없습니다.</p>
+                            </div>
+                        </div>
                     </aside>
 
                     <section class="flex-1 space-y-6">
-                        <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-6">
+                        <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-6" data-mode-visible="location,team,custom">
                             <div class="space-y-4 text-center">
                                 <span id="active-mode-badge" class="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-slate-100 text-sm font-semibold text-slate-600">📍 위치기반 모드</span>
                                 <h3 class="text-3xl font-bold text-gray-900">오늘 뭐 먹지?</h3>
@@ -254,12 +281,18 @@
                                                 <option value="random">🎲 랜덤 9</option>
                                             </select>
                                         </div>
-                                        <button id="resetBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-full shadow-lg">다시 불러오기</button>
+                                        <div id="reset-default-slot">
+                                            <div id="reset-btn-wrapper">
+                                                <button id="resetBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-full shadow-lg">다시 불러오기</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div class="flex flex-wrap justify-center gap-3">
-                                    <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-10 rounded-full shadow-lg" disabled>START</button>
+                                <div id="start-default-slot">
+                                    <div id="start-btn-wrapper" class="flex flex-wrap justify-center gap-3">
+                                        <button id="startBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-10 rounded-full shadow-lg" disabled>START</button>
+                                    </div>
                                 </div>
 
                                 <div id="save-container" class="hidden">
@@ -269,6 +302,62 @@
                                             <button id="saveBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md">저장</button>
                                         </div>
                                         <p class="text-xs text-gray-500 mt-3 text-center">마음에 드는 룰렛이 나오면 소장해두고 계속 사용해보세요!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="race-panel" data-mode-visible="race" class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-6 mode-hidden">
+                            <div class="space-y-2 text-center">
+                                <span class="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-amber-100 text-sm font-semibold text-amber-600">🏇 MODE 04</span>
+                                <h3 class="text-3xl font-bold text-gray-900">커피 내기 경마 트랙</h3>
+                                <p id="race-status-label" class="text-gray-600 min-h-[1.5rem]">출전할 말을 선택해 주세요.</p>
+                            </div>
+
+                            <div class="grid gap-6 lg:grid-cols-2">
+                                <div class="space-y-5">
+                                    <div class="space-y-3">
+                                        <label class="flex items-center justify-between text-sm font-semibold text-slate-700">
+                                            출전 말 수
+                                            <span class="text-xs text-slate-400">최소 2두 · 최대 10두</span>
+                                        </label>
+                                        <div class="flex items-center gap-3">
+                                            <input id="race-horse-count-input" type="number" min="2" max="10" value="5" class="w-20 border rounded-md px-3 py-2 text-sm">
+                                            <input id="race-horse-count-range" type="range" min="2" max="10" value="5" class="flex-1">
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="font-semibold text-gray-800">말 선택</h4>
+                                            <span id="race-selected-counter" class="text-xs text-slate-500">0 / 10</span>
+                                        </div>
+                                        <p class="text-xs text-slate-500">즐겨 찾는 말 10두 가운데에서 레이스에 내보낼 말을 골라 주세요.</p>
+                                        <div id="race-horse-list" class="grid grid-cols-2 gap-2"></div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-5">
+                                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-semibold text-slate-600">레이스 진행 상황</span>
+                                            <span id="race-timer" class="text-xs text-slate-500">00:00</span>
+                                        </div>
+                                        <div id="race-track" class="space-y-3"></div>
+                                        <div id="race-controls-container" class="space-y-3">
+                                            <div class="text-xs text-slate-500">START를 누르면 모든 말이 출발해요. 경기가 끝날 때까지 UI가 잠깁니다.</div>
+                                            <div id="race-controls-slot" class="flex flex-wrap justify-center gap-3"></div>
+                                        </div>
+                                    </div>
+
+                                    <div id="race-results" class="hidden bg-slate-900 text-white rounded-xl p-5 space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <h4 class="text-lg font-semibold">결과 발표</h4>
+                                            <span class="text-xs uppercase tracking-widest text-amber-300">Finish</span>
+                                        </div>
+                                        <ol id="race-results-list" class="space-y-2 text-sm"></ol>
+                                        <button id="race-again-btn" class="hidden w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 rounded-full">다시 달리기</button>
+                                        <p class="text-xs text-amber-200 text-center">우승 기록은 저장되어 다음 레이스에도 반영돼요.</p>
                                     </div>
                                 </div>
                             </div>
@@ -321,7 +410,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, updateDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, deleteDoc, query, orderBy, serverTimestamp, updateDoc, increment, arrayUnion, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- UI 요소 ---
         const canvas = document.getElementById('rouletteCanvas');
@@ -363,6 +452,24 @@
         const modeButtons = document.querySelectorAll('[data-mode-target]');
         const modeScopedElements = document.querySelectorAll('[data-mode-visible]');
         const homeBtn = document.getElementById('home-btn');
+        const racePanel = document.getElementById('race-panel');
+        const raceHorseCountInput = document.getElementById('race-horse-count-input');
+        const raceHorseCountRange = document.getElementById('race-horse-count-range');
+        const raceHorseList = document.getElementById('race-horse-list');
+        const raceSelectedCounter = document.getElementById('race-selected-counter');
+        const raceTrack = document.getElementById('race-track');
+        const raceStatusLabel = document.getElementById('race-status-label');
+        const raceTimer = document.getElementById('race-timer');
+        const raceResults = document.getElementById('race-results');
+        const raceResultsList = document.getElementById('race-results-list');
+        const raceAgainBtn = document.getElementById('race-again-btn');
+        const raceControlsSlot = document.getElementById('race-controls-slot');
+        const raceControlsContainer = document.getElementById('race-controls-container');
+        const startDefaultSlot = document.getElementById('start-default-slot');
+        const resetDefaultSlot = document.getElementById('reset-default-slot');
+        const startBtnWrapper = document.getElementById('start-btn-wrapper');
+        const resetBtnWrapper = document.getElementById('reset-btn-wrapper');
+        const raceSummaryNodes = document.querySelectorAll('[data-race-summary]');
 
         // --- 전역 변수 ---
         const SEGMENT_COUNT = 9;
@@ -381,11 +488,36 @@
         let teamSlots = Array.from({ length: SEGMENT_COUNT }, () => '');
         let lastTeamSpinTrigger = '';
         let teamSnapshotInitialized = false;
+        const startBtnDefaultLabel = startBtn ? startBtn.textContent.trim() : 'START';
+        const resetBtnDefaultLabel = resetBtn ? resetBtn.textContent.trim() : 'RESET';
+
+        const RACE_MIN_DURATION = 10000;
+        const RACE_MAX_EXTRA_DURATION = 6000;
+        const RACE_HORSE_LIMIT = 10;
+        let allHorses = [
+            { id: 'horse-01', name: '번개', icon: '⚡' },
+            { id: 'horse-02', name: '질주', icon: '💨' },
+            { id: 'horse-03', name: '새벽별', icon: '🌟' },
+            { id: 'horse-04', name: '커피콩', icon: '☕' },
+            { id: 'horse-05', name: '모래바람', icon: '🌬️' },
+            { id: 'horse-06', name: '달빛', icon: '🌙' },
+            { id: 'horse-07', name: '토네이도', icon: '🌪️' },
+            { id: 'horse-08', name: '파도', icon: '🌊' },
+            { id: 'horse-09', name: '봄바람', icon: '🌸' },
+            { id: 'horse-10', name: '폭죽', icon: '🎆' }
+        ];
+        let selectedHorseIds = new Set();
+        let raceQueue = [];
+        let horseWinRecord = {};
+        let raceParticipantCount = 5;
+        let raceState = createEmptyRaceState();
+        let raceStatsLoaded = false;
 
         const Mode = {
             LOCATION: 'location',
             TEAM: 'team',
-            CUSTOM: 'custom'
+            CUSTOM: 'custom',
+            RACE: 'race'
         };
 
         const modeMeta = {
@@ -400,6 +532,10 @@
             [Mode.CUSTOM]: {
                 badge: '🎨 커스텀 모드',
                 description: '나만의 후보를 직접 구성하고 저장하거나 자랑해 보세요.'
+            },
+            [Mode.RACE]: {
+                badge: '🏇 커피 내기 경마',
+                description: '말을 선택하고 최소 10초 이상 펼쳐지는 레이스로 커피 내기 우승자를 결정하세요.'
             }
         };
 
@@ -411,6 +547,7 @@
             canvas.width = size;
             canvas.height = size;
             drawWheel();
+            initializeRaceModule();
             initializeFirebase();
         };
 
@@ -419,6 +556,499 @@
             statusMessage.textContent = '주변 맛집을 모으는 중이에요...';
             candidateListsWrapper.innerHTML = '<p class="text-sm text-gray-400 text-center">주변 후보를 불러오는 중이에요...</p>';
             handleReset({ silent: true });
+        }
+
+        // --- 경마 모드 헬퍼 ---
+        function createEmptyRaceState() {
+            return {
+                status: 'idle',
+                startTimestamp: null,
+                racers: [],
+                results: [],
+                animationId: null,
+                progressElements: new Map(),
+                speedLabels: new Map(),
+                durationMap: new Map()
+            };
+        }
+
+        function initializeRaceModule() {
+            if (!racePanel) return;
+            selectedHorseIds = new Set(allHorses.slice(0, raceParticipantCount).map(horse => horse.id));
+            loadHorseWinRecordFromStorage();
+            renderHorseWinSummary();
+            renderRaceHorseList();
+            updateRaceSelectionUI();
+            updateRaceTrackParticipants();
+        }
+
+        function loadHorseWinRecordFromStorage() {
+            try {
+                const raw = localStorage.getItem('lunch-race-wins');
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        horseWinRecord = { ...horseWinRecord, ...parsed };
+                    }
+                }
+            } catch (error) {
+                console.warn('경마 기록 로드 실패:', error);
+            }
+            allHorses.forEach(horse => {
+                if (typeof horseWinRecord[horse.id] !== 'number' || Number.isNaN(horseWinRecord[horse.id])) {
+                    horseWinRecord[horse.id] = 0;
+                }
+            });
+        }
+
+        async function loadHorseWinRecordFromRemote() {
+            if (!db || raceStatsLoaded) return;
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const statsSnapshot = await getDocs(collection(db, 'artifacts', appId, 'raceStats'));
+                statsSnapshot.forEach(docSnap => {
+                    const data = docSnap.data() || {};
+                    const wins = typeof data.wins === 'number' && !Number.isNaN(data.wins) ? data.wins : 0;
+                    horseWinRecord[docSnap.id] = wins;
+                    const horseMeta = allHorses.find(horse => horse.id === docSnap.id);
+                    if (horseMeta && typeof data.name === 'string' && data.name.trim() !== '') {
+                        horseMeta.name = data.name;
+                    }
+                });
+                raceStatsLoaded = true;
+                renderHorseWinSummary();
+                renderRaceHorseList();
+                updateRaceSelectionUI();
+            } catch (error) {
+                console.error('경마 승수 불러오기 실패:', error);
+            }
+        }
+
+        function renderHorseWinSummary() {
+            if (!raceSummaryNodes || raceSummaryNodes.length === 0) return;
+            const summary = allHorses.map(horse => ({
+                ...horse,
+                wins: horseWinRecord[horse.id] || 0
+            })).sort((a, b) => {
+                if (b.wins === a.wins) {
+                    return a.name.localeCompare(b.name, 'ko');
+                }
+                return b.wins - a.wins;
+            });
+
+            raceSummaryNodes.forEach(node => {
+                if (!node) return;
+                const hasWinner = summary.some(item => item.wins > 0);
+                if (!hasWinner) {
+                    node.innerHTML = '<div class="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm text-sm text-slate-500">아직 경마 기록이 없습니다.</div>';
+                    return;
+                }
+                const topThree = summary.slice(0, 3);
+                node.innerHTML = `
+                    <div class="space-y-2">
+                        ${topThree.map((horse, index) => `
+                            <div class="flex items-center justify-between bg-white border border-slate-200 rounded-2xl px-3 py-2 shadow-sm">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-amber-600">${index + 1}</span>
+                                    <span class="text-sm font-semibold text-slate-700">${horse.icon || '🐎'} ${safeText(horse.name)}</span>
+                                </div>
+                                <span class="text-xs font-semibold text-slate-500">${horse.wins} 승</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            });
+        }
+
+        function renderRaceHorseList() {
+            if (!raceHorseList) return;
+            raceHorseList.innerHTML = '';
+            allHorses.forEach(horse => {
+                const label = document.createElement('label');
+                label.className = 'flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'accent-amber-500';
+                checkbox.value = horse.id;
+                checkbox.checked = selectedHorseIds.has(horse.id);
+                checkbox.addEventListener('change', () => handleRaceHorseToggle(horse.id, checkbox.checked));
+
+                const infoWrap = document.createElement('div');
+                infoWrap.className = 'flex-1 flex items-center justify-between gap-2';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'text-sm font-semibold text-slate-700';
+                nameSpan.textContent = `${horse.icon || '🐎'} ${horse.name}`;
+
+                const winBadge = document.createElement('span');
+                winBadge.className = 'text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full';
+                winBadge.textContent = `${horseWinRecord[horse.id] || 0} 승`;
+
+                infoWrap.appendChild(nameSpan);
+                infoWrap.appendChild(winBadge);
+
+                label.appendChild(checkbox);
+                label.appendChild(infoWrap);
+
+                raceHorseList.appendChild(label);
+            });
+        }
+
+        function setRaceStatus(message) {
+            if (raceStatusLabel) {
+                raceStatusLabel.textContent = message;
+            }
+        }
+
+        function updateRaceParticipantInputs() {
+            const selectedCount = selectedHorseIds.size;
+            const maxParticipants = Math.max(2, Math.min(RACE_HORSE_LIMIT, selectedCount || RACE_HORSE_LIMIT));
+            raceParticipantCount = Math.min(raceParticipantCount, maxParticipants);
+            const currentValue = Math.max(2, Math.min(raceParticipantCount, maxParticipants));
+            if (raceHorseCountInput) {
+                raceHorseCountInput.max = maxParticipants;
+                raceHorseCountInput.value = currentValue;
+            }
+            if (raceHorseCountRange) {
+                raceHorseCountRange.max = maxParticipants;
+                raceHorseCountRange.value = currentValue;
+            }
+            raceParticipantCount = currentValue;
+        }
+
+        function updateRaceSelectionUI() {
+            if (!racePanel) return;
+            const selectedCount = selectedHorseIds.size;
+            if (raceSelectedCounter) {
+                raceSelectedCounter.textContent = `${selectedCount} / ${RACE_HORSE_LIMIT}`;
+            }
+            updateRaceParticipantInputs();
+            if (raceState.status === 'idle') {
+                if (selectedCount < 2) {
+                    setRaceStatus('말을 두 마리 이상 선택해 주세요.');
+                } else if (selectedCount < raceParticipantCount) {
+                    setRaceStatus('출전 말 수보다 적게 선택했어요. 체크박스를 더 선택해 주세요.');
+                } else {
+                    setRaceStatus('모든 준비가 끝났어요! START를 눌러 레이스를 시작하세요.');
+                }
+            }
+            updateRaceTrackParticipants();
+            updateStartButtonState();
+        }
+
+        function handleRaceHorseToggle(horseId, checked) {
+            if (checked) {
+                selectedHorseIds.add(horseId);
+            } else {
+                selectedHorseIds.delete(horseId);
+            }
+            updateRaceSelectionUI();
+            updateStartButtonState();
+        }
+
+        function setRaceParticipantCount(count) {
+            const parsed = Math.max(2, Math.min(RACE_HORSE_LIMIT, Number(count) || 0));
+            raceParticipantCount = parsed;
+            updateRaceParticipantInputs();
+            updateRaceTrackParticipants();
+            updateStartButtonState();
+            if (raceState.status === 'idle' && selectedHorseIds.size >= raceParticipantCount) {
+                setRaceStatus('모든 준비가 끝났어요! START를 눌러 레이스를 시작하세요.');
+            }
+        }
+
+        function updateRaceTrackParticipants() {
+            if (!raceTrack) return;
+            raceState.progressElements = new Map();
+            raceState.speedLabels = new Map();
+            const selected = Array.from(selectedHorseIds);
+            const participants = selected.slice(0, Math.min(raceParticipantCount, selected.length));
+            if (participants.length < 2) {
+                raceTrack.innerHTML = '<p class="text-sm text-slate-500">말을 두 마리 이상 선택하면 트랙이 준비됩니다.</p>';
+                return;
+            }
+            raceTrack.innerHTML = '';
+            participants.forEach((horseId, index) => {
+                const horse = allHorses.find(item => item.id === horseId) || { id: horseId, name: horseId, icon: '🐎' };
+                const lane = document.createElement('div');
+                lane.className = 'space-y-1';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between text-sm font-semibold text-slate-700';
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = `${horse.icon || '🐎'} ${horse.name}`;
+
+                const speedSpan = document.createElement('span');
+                speedSpan.className = 'text-xs text-slate-400';
+                speedSpan.textContent = '0%';
+
+                header.appendChild(nameSpan);
+                header.appendChild(speedSpan);
+
+                const barOuter = document.createElement('div');
+                barOuter.className = 'h-3 bg-white rounded-full overflow-hidden border border-slate-200';
+
+                const barInner = document.createElement('div');
+                barInner.className = 'h-full bg-amber-400 rounded-full transition-[width] duration-150 ease-out';
+                barInner.style.width = '0%';
+                barInner.dataset.horseId = horseId;
+
+                barOuter.appendChild(barInner);
+                lane.appendChild(header);
+                lane.appendChild(barOuter);
+                raceTrack.appendChild(lane);
+
+                raceState.progressElements.set(horseId, barInner);
+                raceState.speedLabels.set(horseId, speedSpan);
+            });
+        }
+
+        function setRaceInputsDisabled(disabled) {
+            if (raceHorseCountInput) raceHorseCountInput.disabled = disabled;
+            if (raceHorseCountRange) raceHorseCountRange.disabled = disabled;
+            if (raceHorseList) {
+                raceHorseList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.disabled = disabled;
+                });
+            }
+            if (disabled) {
+                raceControlsContainer?.classList.add('pointer-events-none', 'opacity-60');
+            } else {
+                raceControlsContainer?.classList.remove('pointer-events-none', 'opacity-60');
+            }
+        }
+
+        function mountRaceControls() {
+            if (!raceControlsSlot) return;
+            if (startBtnWrapper && !raceControlsSlot.contains(startBtnWrapper)) {
+                raceControlsSlot.appendChild(startBtnWrapper);
+            }
+            if (resetBtnWrapper && !raceControlsSlot.contains(resetBtnWrapper)) {
+                raceControlsSlot.appendChild(resetBtnWrapper);
+            }
+            if (startBtn) startBtn.textContent = startBtnDefaultLabel;
+            if (resetBtn) resetBtn.textContent = 'RESET';
+        }
+
+        function unmountRaceControls() {
+            if (startDefaultSlot && startBtnWrapper && !startDefaultSlot.contains(startBtnWrapper)) {
+                startDefaultSlot.appendChild(startBtnWrapper);
+            }
+            if (resetDefaultSlot && resetBtnWrapper && !resetDefaultSlot.contains(resetBtnWrapper)) {
+                resetDefaultSlot.appendChild(resetBtnWrapper);
+            }
+            if (startBtn) startBtn.textContent = startBtnDefaultLabel;
+            if (resetBtn) resetBtn.textContent = resetBtnDefaultLabel;
+        }
+
+        function initRaceMode() {
+            mountRaceControls();
+            stopRaceAnimation();
+            raceQueue = [];
+            raceState = createEmptyRaceState();
+            raceParticipantCount = Math.min(5, RACE_HORSE_LIMIT);
+            selectedHorseIds = new Set(allHorses.slice(0, raceParticipantCount).map(horse => horse.id));
+            renderRaceHorseList();
+            updateRaceSelectionUI();
+            setRaceInputsDisabled(false);
+            raceTimer.textContent = '00:00';
+            raceResults.classList.add('hidden');
+            raceAgainBtn.classList.add('hidden');
+            setRaceStatus('출전할 말을 선택해 주세요.');
+            updateStartButtonState();
+        }
+
+        function resetRaceMode(options = {}) {
+            const { keepSelection = false } = options;
+            stopRaceAnimation();
+            raceState = createEmptyRaceState();
+            raceResults.classList.add('hidden');
+            raceAgainBtn.classList.add('hidden');
+            raceTimer.textContent = '00:00';
+            if (!keepSelection) {
+                raceParticipantCount = Math.min(5, RACE_HORSE_LIMIT);
+                selectedHorseIds = new Set(allHorses.slice(0, raceParticipantCount).map(horse => horse.id));
+                renderRaceHorseList();
+            }
+            updateRaceSelectionUI();
+            setRaceInputsDisabled(false);
+            if (keepSelection && selectedHorseIds.size >= Math.max(2, raceParticipantCount)) {
+                setRaceStatus('같은 구성으로 다시 달릴 준비가 되었어요. START를 눌러주세요!');
+            } else {
+                setRaceStatus('출전할 말을 선택해 주세요.');
+            }
+            updateStartButtonState();
+        }
+
+        function stopRaceAnimation() {
+            if (raceState && raceState.animationId) {
+                cancelAnimationFrame(raceState.animationId);
+            }
+            raceState.animationId = null;
+        }
+
+        function teardownRaceMode() {
+            stopRaceAnimation();
+            setRaceInputsDisabled(false);
+            raceState = createEmptyRaceState();
+            raceResults?.classList.add('hidden');
+            raceAgainBtn?.classList.add('hidden');
+            raceTimer.textContent = '00:00';
+            unmountRaceControls();
+        }
+
+        function formatRaceTime(ms) {
+            const totalMs = Math.max(0, Math.floor(ms));
+            const seconds = Math.floor(totalMs / 1000);
+            const centi = Math.floor((totalMs % 1000) / 10);
+            return `${String(seconds).padStart(2, '0')}:${String(centi).padStart(2, '0')}`;
+        }
+
+        function buildRaceParticipants() {
+            const selected = Array.from(selectedHorseIds);
+            const participants = selected.slice(0, Math.min(raceParticipantCount, selected.length));
+            return participants.map((horseId, index) => {
+                const horse = allHorses.find(item => item.id === horseId) || { id: horseId, name: horseId, icon: '🐎' };
+                return {
+                    horse,
+                    progress: 0,
+                    duration: RACE_MIN_DURATION + Math.random() * RACE_MAX_EXTRA_DURATION,
+                    randomPhase: Math.random() * Math.PI * 2,
+                    finishTime: null
+                };
+            });
+        }
+
+        function handleRaceStart() {
+            if (raceState.status === 'running') return;
+            const participants = buildRaceParticipants();
+            if (participants.length < 2) {
+                setRaceStatus('말을 두 마리 이상 선택해 주세요.');
+                updateStartButtonState();
+                return;
+            }
+            if (participants.length < raceParticipantCount) {
+                setRaceStatus('출전 말 수보다 적게 선택했어요. 체크박스를 더 선택해 주세요.');
+                updateStartButtonState();
+                return;
+            }
+
+            raceState = createEmptyRaceState();
+            raceState.racers = participants;
+            raceState.durationMap = new Map(participants.map(item => [item.horse.id, item.duration]));
+            raceState.results = [];
+            raceState.status = 'running';
+            raceState.startTimestamp = performance.now();
+            setRaceInputsDisabled(true);
+            raceResults.classList.add('hidden');
+            raceAgainBtn.classList.add('hidden');
+            setRaceStatus('레이스가 진행 중입니다! ☕');
+            updateStartButtonState();
+            raceState.animationId = requestAnimationFrame(updateRaceFrame);
+        }
+
+        function updateRaceFrame(timestamp) {
+            if (raceState.status !== 'running') return;
+            if (typeof raceState.startTimestamp !== 'number') {
+                raceState.startTimestamp = timestamp;
+            }
+            const elapsed = timestamp - raceState.startTimestamp;
+            raceTimer.textContent = formatRaceTime(elapsed);
+
+            raceState.racers.forEach(racer => {
+                if (racer.finishTime) return;
+                const baseProgress = Math.min(1, elapsed / racer.duration);
+                const sway = Math.sin((elapsed / 200) + racer.randomPhase) * 0.02;
+                const drift = (Math.random() - 0.5) * 0.01;
+                let nextProgress = Math.min(1, Math.max(racer.progress, baseProgress + sway + drift));
+                if (elapsed < RACE_MIN_DURATION) {
+                    nextProgress = Math.min(nextProgress, 0.99);
+                }
+                racer.progress = nextProgress;
+                const bar = raceState.progressElements.get(racer.horse.id);
+                if (bar) {
+                    bar.style.width = `${(nextProgress * 100).toFixed(1)}%`;
+                }
+                const speedLabel = raceState.speedLabels.get(racer.horse.id);
+                if (speedLabel) {
+                    speedLabel.textContent = `${Math.round(nextProgress * 100)}%`;
+                }
+                if (elapsed >= RACE_MIN_DURATION && nextProgress >= 1 && !racer.finishTime) {
+                    racer.finishTime = timestamp;
+                    raceState.results.push({
+                        horse: racer.horse,
+                        finishTime: timestamp,
+                        duration: timestamp - raceState.startTimestamp
+                    });
+                }
+            });
+
+            if (raceState.results.length === raceState.racers.length) {
+                finalizeRace(timestamp);
+                return;
+            }
+
+            raceState.animationId = requestAnimationFrame(updateRaceFrame);
+        }
+
+        function finalizeRace(timestamp) {
+            stopRaceAnimation();
+            raceState.status = 'finished';
+            const finalElapsed = timestamp - raceState.startTimestamp;
+            raceTimer.textContent = formatRaceTime(finalElapsed);
+            setRaceInputsDisabled(false);
+            raceAgainBtn.classList.remove('hidden');
+
+            raceResultsList.innerHTML = '';
+            raceState.results.sort((a, b) => a.duration - b.duration);
+            raceState.results.forEach((result, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2';
+                li.innerHTML = `<span class="font-semibold">#${index + 1} ${result.horse.icon || '🐎'} ${safeText(result.horse.name)}</span><span class="text-xs text-slate-300">${formatRaceTime(result.duration)}</span>`;
+                raceResultsList.appendChild(li);
+            });
+            raceResults.classList.remove('hidden');
+
+            if (raceState.results.length > 0) {
+                const winner = raceState.results[0].horse;
+                horseWinRecord[winner.id] = (horseWinRecord[winner.id] || 0) + 1;
+                raceQueue.unshift({
+                    timestamp: Date.now(),
+                    results: raceState.results.map((entry, index) => ({
+                        rank: index + 1,
+                        horseId: entry.horse.id,
+                        name: entry.horse.name,
+                        duration: entry.duration
+                    }))
+                });
+                if (raceQueue.length > 10) {
+                    raceQueue = raceQueue.slice(0, 10);
+                }
+                persistHorseWinRecord(winner);
+            }
+
+            renderHorseWinSummary();
+            renderRaceHorseList();
+            setRaceStatus('레이스가 종료되었습니다! 다시 달리기를 누르면 같은 구성으로 재도전할 수 있어요.');
+            updateStartButtonState();
+        }
+
+        function persistHorseWinRecord(winnerHorse) {
+            try {
+                localStorage.setItem('lunch-race-wins', JSON.stringify(horseWinRecord));
+            } catch (error) {
+                console.warn('경마 기록 저장 실패:', error);
+            }
+            if (!db) return;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const docRef = doc(db, 'artifacts', appId, 'raceStats', winnerHorse.id);
+            setDoc(docRef, {
+                name: winnerHorse.name,
+                wins: horseWinRecord[winnerHorse.id] || 0,
+                updatedAt: serverTimestamp()
+            }, { merge: true }).catch(error => console.error('경마 승수 저장 실패:', error));
         }
 
         function updateModeButtons(activeMode) {
@@ -446,6 +1076,10 @@
             const isSameMode = previousMode === mode;
             currentMode = mode;
 
+            if (previousMode === Mode.RACE && mode !== Mode.RACE) {
+                teardownRaceMode();
+            }
+
             landingScreen.classList.add('hidden');
             appShell.classList.remove('hidden');
 
@@ -459,6 +1093,9 @@
             if (isSameMode) {
                 if (mode === Mode.LOCATION) {
                     attemptAutoDiscovery();
+                }
+                if (mode === Mode.RACE) {
+                    updateRaceSelectionUI();
                 }
                 return;
             }
@@ -483,6 +1120,11 @@
                         statusMessage.textContent = '나만의 룰렛을 만들어 보세요.';
                     }
                 }
+            } else if (mode === Mode.RACE) {
+                if (teamMode) {
+                    leaveTeamMode({ silent: true });
+                }
+                initRaceMode();
             }
 
             if (mode !== Mode.LOCATION) {
@@ -499,13 +1141,17 @@
                 resetState(true);
             }
 
+            if (currentMode === Mode.RACE) {
+                teardownRaceMode();
+            }
+
             currentMode = null;
             landingScreen.classList.remove('hidden');
             appShell.classList.add('hidden');
             modeButtons.forEach(button => button.classList.remove('mode-button-active'));
             modeScopedElements.forEach(element => element.classList.add('mode-hidden'));
             statusMessage.textContent = '모드를 선택해 주세요.';
-            modeDescription.textContent = '세 가지 방식으로 점심 고민을 단번에 해결해 보세요.';
+            modeDescription.textContent = '네 가지 방식으로 점심 고민을 단번에 해결해 보세요.';
             activeModeBadge.textContent = '모드를 선택해 주세요';
             locationFallback.classList.add('hidden');
         }  
@@ -516,6 +1162,14 @@
         }
 
         function updateStartButtonState() {
+            if (currentMode === Mode.RACE) {
+                const selectedCount = selectedHorseIds.size;
+                const participantsNeeded = Math.max(2, raceParticipantCount);
+                const ready = selectedCount >= participantsNeeded;
+                startBtn.disabled = raceState.status === 'running' || !ready;
+                resetBtn.disabled = raceState.status === 'running';
+                return;
+            }
             if (teamMode) {
                 const allFilled = teamSlots.every(slot => typeof slot === 'string' && slot.trim() !== '');
                 startBtn.disabled = isSpinning || !allFilled;
@@ -551,6 +1205,7 @@
                         loadSavedRoulettes();
                         loadSharedRoulettes();
                         resetBtn.disabled = false;
+                        loadHorseWinRecordFromRemote();
                     } else {
                         signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
                     }
@@ -831,6 +1486,9 @@
         saveBtn.addEventListener('click', handleSave);
         searchSharedInput.addEventListener('input', renderSharedRoulettes);
         applyCustomBtn.addEventListener('click', handleApplyCustomChart);
+        raceHorseCountInput?.addEventListener('input', () => setRaceParticipantCount(raceHorseCountInput.value));
+        raceHorseCountRange?.addEventListener('input', () => setRaceParticipantCount(raceHorseCountRange.value));
+        raceAgainBtn?.addEventListener('click', () => resetRaceMode({ keepSelection: true }));
         teamJoinBtn.addEventListener('click', joinTeamRoom);
         teamLeaveBtn.addEventListener('click', () => leaveTeamMode());
         teamAccessInput.addEventListener('keyup', (event) => {
@@ -913,6 +1571,10 @@
 
         // --- 상태 관리 함수 ---
         function handleReset(options = {}) {
+            if (currentMode === Mode.RACE) {
+                resetRaceMode();
+                return;
+            }
             if (isSpinning) return;
             if (teamMode) {
                 resetBtn.disabled = true;
@@ -1010,6 +1672,10 @@
         }
 
         async function handleStart() {
+            if (currentMode === Mode.RACE) {
+                handleRaceStart();
+                return;
+            }
             if (isSpinning) return;
 
             if (teamMode) {

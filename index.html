@@ -102,6 +102,40 @@
         .mode-hidden {
             display: none !important;
         }
+        .race-track {
+            position: relative;
+            height: 2.75rem;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.95));
+            border: 1px solid #e2e8f0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+            overflow: hidden;
+        }
+        .race-track-inner {
+            position: absolute;
+            inset: 6px;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.18);
+            overflow: hidden;
+        }
+        .race-track-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #fcd34d, #f97316);
+            transition: width 0.15s ease-out;
+            box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.35);
+        }
+        .race-track-icon {
+            position: absolute;
+            top: 50%;
+            left: 0%;
+            transform: translate(-50%, -50%);
+            font-size: 1.75rem;
+            transition: left 0.15s ease-out;
+            filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -787,20 +821,34 @@
                 header.appendChild(nameSpan);
                 header.appendChild(speedSpan);
 
-                const barOuter = document.createElement('div');
-                barOuter.className = 'h-3 bg-white rounded-full overflow-hidden border border-slate-200';
+                const trackOuter = document.createElement('div');
+                trackOuter.className = 'race-track';
 
-                const barInner = document.createElement('div');
-                barInner.className = 'h-full bg-amber-400 rounded-full transition-[width] duration-150 ease-out';
-                barInner.style.width = '0%';
-                barInner.dataset.horseId = horseId;
+                const trackInner = document.createElement('div');
+                trackInner.className = 'race-track-inner';
 
-                barOuter.appendChild(barInner);
+                const progressFill = document.createElement('div');
+                progressFill.className = 'race-track-fill';
+                progressFill.style.width = '0%';
+
+                trackInner.appendChild(progressFill);
+                trackOuter.appendChild(trackInner);
+
+                const horseIcon = document.createElement('div');
+                horseIcon.className = 'race-track-icon';
+                horseIcon.textContent = horse.icon || '🐎';
+                horseIcon.style.left = '0%';
+
+                trackOuter.appendChild(horseIcon);
+
                 lane.appendChild(header);
-                lane.appendChild(barOuter);
+                lane.appendChild(trackOuter);
                 raceTrack.appendChild(lane);
 
-                raceState.progressElements.set(horseId, barInner);
+                raceState.progressElements.set(horseId, {
+                    fill: progressFill,
+                    icon: horseIcon
+                });
                 raceState.speedLabels.set(horseId, speedSpan);
             });
         }
@@ -935,7 +983,12 @@
                 return;
             }
 
-            raceState = createEmptyRaceState();
+            const trackElements = raceState.progressElements;
+            const speedElements = raceState.speedLabels;
+            const nextState = createEmptyRaceState();
+            nextState.progressElements = trackElements;
+            nextState.speedLabels = speedElements;
+            raceState = nextState;
             raceState.racers = participants;
             raceState.durationMap = new Map(participants.map(item => [item.horse.id, item.duration]));
             raceState.results = [];
@@ -967,9 +1020,13 @@
                     nextProgress = Math.min(nextProgress, 0.99);
                 }
                 racer.progress = nextProgress;
-                const bar = raceState.progressElements.get(racer.horse.id);
-                if (bar) {
-                    bar.style.width = `${(nextProgress * 100).toFixed(1)}%`;
+                const trackElements = raceState.progressElements.get(racer.horse.id);
+                const progressValue = `${(nextProgress * 100).toFixed(1)}%`;
+                if (trackElements?.fill) {
+                    trackElements.fill.style.width = progressValue;
+                }
+                if (trackElements?.icon) {
+                    trackElements.icon.style.left = progressValue;
                 }
                 const speedLabel = raceState.speedLabels.get(racer.horse.id);
                 if (speedLabel) {

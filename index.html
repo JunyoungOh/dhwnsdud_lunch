@@ -131,6 +131,21 @@
         .mode-hidden {
             display: none !important;
         }
+        .race-track-scroll {
+            position: relative;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+        }
+        .race-track-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .race-track-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .race-track-scroll::-webkit-scrollbar-thumb {
+            background: #fbbf24;
+            border-radius: 9999px;
+        }
         .race-track {
             position: relative;
             height: 2.75rem;
@@ -139,6 +154,7 @@
             border: 1px solid #e2e8f0;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
             overflow: hidden;
+            min-width: 100%;
         }
         .race-track-inner {
             position: absolute;
@@ -164,6 +180,46 @@
             transition: left 0.15s ease-out;
             filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
             pointer-events: none;
+        }
+        .race-status-label {
+            min-height: 1.25rem;
+        }
+        .race-lane {
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        .race-lane-boost {
+            transform: scale(1.02);
+        }
+        .race-lane-boost .race-track-fill {
+            animation: raceBoostPulse 0.45s ease-in-out infinite alternate;
+        }
+        .race-lane-stumble {
+            filter: grayscale(0.25);
+        }
+        .race-lane-stumble .race-track-icon {
+            animation: raceStumbleShake 0.6s ease-in-out infinite;
+        }
+        @keyframes raceBoostPulse {
+            0% {
+                box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.45);
+            }
+            100% {
+                box-shadow: inset 0 0 18px rgba(251, 146, 60, 0.6);
+            }
+        }
+        @keyframes raceStumbleShake {
+            0%, 100% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            25% {
+                transform: translate(calc(-50% + 2px), calc(-50% - 2px)) rotate(-10deg);
+            }
+            50% {
+                transform: translate(calc(-50% - 2px), calc(-50% + 2px)) rotate(8deg);
+            }
+            75% {
+                transform: translate(calc(-50% + 1px), calc(-50% + 1px)) rotate(-6deg);
+            }
         }
         @media (max-width: 640px) {
             #landing-screen {
@@ -616,20 +672,160 @@
         const startBtnDefaultLabel = startBtn ? startBtn.textContent.trim() : 'START';
         const resetBtnDefaultLabel = resetBtn ? resetBtn.textContent.trim() : 'RESET';
 
-        const RACE_MIN_DURATION = 10000;
-        const RACE_MAX_EXTRA_DURATION = 6000;
+        const RACE_MIN_DURATION = 20000;
+        const RACE_MAX_EXTRA_DURATION = 12000;
         const RACE_HORSE_LIMIT = 10;
+        const RACE_TRACK_LENGTH_FACTOR = 2;
+        const RACE_EVENT_BASE_CHANCE = 0.00018;
+        const RACE_EVENT_BASE_COOLDOWN = 1600;
+        const HORSE_PERSONALITIES = {
+            default: {
+                name: '밸런스형',
+                tagline: '언제나 평균적인 주행을 보여줘요.',
+                randomness: 0.04,
+                eventFrequency: 1,
+                boostBias: 0.55,
+                boostSpeedMultiplier: 1.5,
+                stumbleSpeedMultiplier: 0.1,
+                burstBonus: 1,
+                effectDurationModifier: 1,
+                eventCooldown: 1500
+            },
+            explosive: {
+                name: '폭발형',
+                tagline: '스타트부터 전력질주! 후반엔 숨이 찰 수도 있어요.',
+                randomness: 0.05,
+                eventFrequency: 1.1,
+                boostBias: 0.6,
+                boostSpeedMultiplier: 1.6,
+                stumbleSpeedMultiplier: 0.08,
+                fastStart: { until: 0.4, bonus: 1.35 },
+                fatigue: { from: 0.7, penalty: 0.75 },
+                burstBonus: 1.1,
+                messages: {
+                    boost: ['폭발적인 가속! 🔥', '부스터 온! ⚡'],
+                    stumble: ['숨 고르기 중...', '속도를 조절합니다.']
+                }
+            },
+            steady: {
+                name: '꾸준형',
+                tagline: '큰 파동 없이 꾸준히 달려요.',
+                randomness: 0.02,
+                eventFrequency: 0.65,
+                boostBias: 0.55,
+                boostSpeedMultiplier: 1.4,
+                stumbleSpeedMultiplier: 0.12,
+                baseDurationMultiplier: 0.98,
+                messages: {
+                    boost: ['꾸준히 속도 UP!'],
+                    stumble: ['호흡을 가다듬는 중']
+                }
+            },
+            slowStarter: {
+                name: '슬로우 스타터',
+                tagline: '초반엔 느리지만 후반 폭발!',
+                randomness: 0.04,
+                eventFrequency: 1.1,
+                boostBias: 0.68,
+                boostSpeedMultiplier: 1.75,
+                stumbleSpeedMultiplier: 0.1,
+                slowStart: { until: 0.35, penalty: 0.6 },
+                lateSurge: { from: 0.55, multiplier: 1.6, eventBonus: 1.3, boostShift: 0.12 },
+                messages: {
+                    boost: ['후반 스퍼트!', '기어 변속 완료!'],
+                    stumble: ['잠깐 비틀!']
+                }
+            },
+            lucky: {
+                name: '행운형',
+                tagline: '좋은 일이 자주 일어나는 행운의 말!',
+                randomness: 0.03,
+                eventFrequency: 1.5,
+                boostBias: 0.8,
+                boostSpeedMultiplier: 1.85,
+                stumbleSpeedMultiplier: 0.12,
+                burstBonus: 1.2,
+                effectDurationModifier: 0.9,
+                messages: {
+                    boost: ['행운의 바람! 🍀', '럭키 부스터!'],
+                    stumble: ['운이 좀 나빠요...']
+                }
+            },
+            volatile: {
+                name: '롤러코스터',
+                tagline: '컨디션이 널뛰어요. 대박 아니면 쪽박!',
+                randomness: 0.09,
+                eventFrequency: 1.6,
+                boostBias: 0.52,
+                boostSpeedMultiplier: 1.7,
+                stumbleSpeedMultiplier: 0.05,
+                durationVariance: 0.25,
+                burstBonus: 1.4,
+                effectDurationModifier: 1.1,
+                messages: {
+                    boost: ['컨디션 폭발! 🔥', '폭풍 질주!'],
+                    stumble: ['컨디션 난조! 😵']
+                }
+            },
+            calm: {
+                name: '휴식형',
+                tagline: '중간중간 숨을 고르며 달려요.',
+                randomness: 0.025,
+                eventFrequency: 0.9,
+                boostBias: 0.45,
+                boostSpeedMultiplier: 1.45,
+                stumbleSpeedMultiplier: 0.06,
+                restWindow: { from: 0.3, to: 0.6, chanceMultiplier: 1.4, boostModifier: 0.7 },
+                effectDurationModifier: 1.05,
+                messages: {
+                    boost: ['차분한 가속!'],
+                    stumble: ['숨 고르며 재정비 중']
+                }
+            },
+            wave: {
+                name: '파도타기',
+                tagline: '리듬을 타며 파도처럼 출렁!',
+                randomness: 0.05,
+                eventFrequency: 1.0,
+                boostBias: 0.6,
+                boostSpeedMultiplier: 1.6,
+                stumbleSpeedMultiplier: 0.09,
+                wave: { frequency: 3, amplitude: 0.05 },
+                messages: {
+                    boost: ['파도타기 속도 UP! 🌊'],
+                    stumble: ['다음 물결 대기...']
+                }
+            },
+            breeze: {
+                name: '산들바람',
+                tagline: '바람처럼 가볍게 올라타요.',
+                randomness: 0.035,
+                eventFrequency: 1.05,
+                boostBias: 0.62,
+                boostSpeedMultiplier: 1.55,
+                stumbleSpeedMultiplier: 0.1,
+                midRaceBoost: { from: 0.45, to: 0.7, multiplier: 1.2 },
+                messages: {
+                    boost: ['산들바람의 가속!'],
+                    stumble: ['바람이 잦아들었어요.']
+                }
+            }
+        };
+        const RACE_BASE_EFFECT_MESSAGES = {
+            boost: ['부스터 온! ⚡', '폭풍 질주!', '스퍼트 가동!'],
+            stumble: ['돌부리에 걸려 넘어짐! 😵', '잠깐 숨 고르기...', '관중 환호에 멈칫!']
+        };
         let allHorses = [
-            { id: 'horse-01', name: '번개', icon: '⚡' },
-            { id: 'horse-02', name: '질주', icon: '💨' },
-            { id: 'horse-03', name: '새벽별', icon: '🌟' },
-            { id: 'horse-04', name: '커피콩', icon: '☕' },
-            { id: 'horse-05', name: '모래바람', icon: '🌬️' },
-            { id: 'horse-06', name: '달빛', icon: '🌙' },
-            { id: 'horse-07', name: '토네이도', icon: '🌪️' },
-            { id: 'horse-08', name: '파도', icon: '🌊' },
-            { id: 'horse-09', name: '봄바람', icon: '🌸' },
-            { id: 'horse-10', name: '폭죽', icon: '🎆' }
+            { id: 'horse-01', name: '번개', icon: '⚡', personality: 'explosive' },
+            { id: 'horse-02', name: '질주', icon: '💨', personality: 'steady' },
+            { id: 'horse-03', name: '새벽별', icon: '🌟', personality: 'slowStarter' },
+            { id: 'horse-04', name: '커피콩', icon: '☕', personality: 'lucky' },
+            { id: 'horse-05', name: '모래바람', icon: '🌬️', personality: 'volatile' },
+            { id: 'horse-06', name: '달빛', icon: '🌙', personality: 'calm' },
+            { id: 'horse-07', name: '토네이도', icon: '🌪️', personality: 'explosive' },
+            { id: 'horse-08', name: '파도', icon: '🌊', personality: 'wave' },
+            { id: 'horse-09', name: '봄바람', icon: '🌸', personality: 'breeze' },
+            { id: 'horse-10', name: '폭죽', icon: '🎆', personality: 'volatile' }
         ];
         let selectedHorseIds = new Set();
         let raceQueue = [];
@@ -660,7 +856,7 @@
             },
             [Mode.RACE]: {
                 badge: '🏇 커피 내기 경마',
-                description: '말을 선택하고 최소 10초 이상 펼쳐지는 레이스로 커피 내기 우승자를 결정하세요.'
+                description: '말을 선택하고 최소 20초 이상 펼쳐지는 레이스로 커피 내기 우승자를 결정하세요.'
             }
         };
 
@@ -730,8 +926,22 @@
                 animationId: null,
                 progressElements: new Map(),
                 speedLabels: new Map(),
+                effectLabels: new Map(),
                 durationMap: new Map()
             };
+        }
+
+        function getHorsePersonalityMeta(horse) {
+            if (!horse) return HORSE_PERSONALITIES.default;
+            const key = horse.personality;
+            return HORSE_PERSONALITIES[key] || HORSE_PERSONALITIES.default;
+        }
+
+        function pickRandomMessage(messages, fallback) {
+            if (Array.isArray(messages) && messages.length > 0) {
+                return messages[Math.floor(Math.random() * messages.length)];
+            }
+            return fallback;
         }
 
         function initializeRaceModule() {
@@ -826,6 +1036,7 @@
             if (!raceHorseList) return;
             raceHorseList.innerHTML = '';
             allHorses.forEach(horse => {
+                const personality = getHorsePersonalityMeta(horse);
                 const label = document.createElement('label');
                 label.className = 'flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm';
 
@@ -837,7 +1048,10 @@
                 checkbox.addEventListener('change', () => handleRaceHorseToggle(horse.id, checkbox.checked));
 
                 const infoWrap = document.createElement('div');
-                infoWrap.className = 'flex-1 flex items-center justify-between gap-2';
+                infoWrap.className = 'flex-1 flex flex-col gap-1';
+
+                const topRow = document.createElement('div');
+                topRow.className = 'flex items-center justify-between gap-2';
 
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'text-sm font-semibold text-slate-700';
@@ -847,8 +1061,16 @@
                 winBadge.className = 'text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full';
                 winBadge.textContent = `${horseWinRecord[horse.id] || 0} 승`;
 
-                infoWrap.appendChild(nameSpan);
-                infoWrap.appendChild(winBadge);
+                topRow.appendChild(nameSpan);
+                topRow.appendChild(winBadge);
+                infoWrap.appendChild(topRow);
+
+                if (personality?.tagline) {
+                    const traitSpan = document.createElement('span');
+                    traitSpan.className = 'text-[11px] text-slate-400';
+                    traitSpan.textContent = `[${personality.name}] ${personality.tagline}`;
+                    infoWrap.appendChild(traitSpan);
+                }
 
                 label.appendChild(checkbox);
                 label.appendChild(infoWrap);
@@ -924,6 +1146,7 @@
             if (!raceTrack) return;
             raceState.progressElements = new Map();
             raceState.speedLabels = new Map();
+            raceState.effectLabels = new Map();
             const selected = Array.from(selectedHorseIds);
             const participants = selected.slice(0, Math.min(raceParticipantCount, selected.length));
             if (participants.length < 2) {
@@ -933,8 +1156,10 @@
             raceTrack.innerHTML = '';
             participants.forEach((horseId, index) => {
                 const horse = allHorses.find(item => item.id === horseId) || { id: horseId, name: horseId, icon: '🐎' };
+                const personality = getHorsePersonalityMeta(horse);
+                const defaultStatus = personality?.tagline || '';
                 const lane = document.createElement('div');
-                lane.className = 'space-y-1';
+                lane.className = 'space-y-2 race-lane';
 
                 const header = document.createElement('div');
                 header.className = 'flex items-center justify-between text-sm font-semibold text-slate-700';
@@ -949,8 +1174,13 @@
                 header.appendChild(nameSpan);
                 header.appendChild(speedSpan);
 
+                const statusMessage = document.createElement('div');
+                statusMessage.className = 'race-status-label text-xs text-amber-600 flex items-center';
+                statusMessage.textContent = defaultStatus;
+
                 const trackOuter = document.createElement('div');
                 trackOuter.className = 'race-track';
+                trackOuter.style.width = `${RACE_TRACK_LENGTH_FACTOR * 100}%`;
 
                 const trackInner = document.createElement('div');
                 trackInner.className = 'race-track-inner';
@@ -969,15 +1199,27 @@
 
                 trackOuter.appendChild(horseIcon);
 
+                const trackScroll = document.createElement('div');
+                trackScroll.className = 'race-track-scroll';
+                trackScroll.appendChild(trackOuter);
+                trackScroll.scrollLeft = 0;
+
                 lane.appendChild(header);
-                lane.appendChild(trackOuter);
+                lane.appendChild(statusMessage);
+                lane.appendChild(trackScroll);
                 raceTrack.appendChild(lane);
 
                 raceState.progressElements.set(horseId, {
                     fill: progressFill,
-                    icon: horseIcon
+                    icon: horseIcon,
+                    scroll: trackScroll,
+                    lane
                 });
                 raceState.speedLabels.set(horseId, speedSpan);
+                raceState.effectLabels.set(horseId, {
+                    element: statusMessage,
+                    defaultText: defaultStatus
+                });
             });
         }
 
@@ -1087,14 +1329,150 @@
             const participants = selected.slice(0, Math.min(raceParticipantCount, selected.length));
             return participants.map((horseId, index) => {
                 const horse = allHorses.find(item => item.id === horseId) || { id: horseId, name: horseId, icon: '🐎' };
+                const personality = getHorsePersonalityMeta(horse);
+                const baseDuration = (RACE_MIN_DURATION + Math.random() * RACE_MAX_EXTRA_DURATION) * (personality.baseDurationMultiplier || 1);
+                const varianceMultiplier = 1 + ((Math.random() - 0.5) * (personality.durationVariance || 0));
+                const duration = Math.max(RACE_MIN_DURATION * 0.6, baseDuration * varianceMultiplier);
                 return {
                     horse,
                     progress: 0,
-                    duration: RACE_MIN_DURATION + Math.random() * RACE_MAX_EXTRA_DURATION,
+                    duration,
                     randomPhase: Math.random() * Math.PI * 2,
-                    finishTime: null
+                    finishTime: null,
+                    personality,
+                    effect: null,
+                    nextEventAllowedAt: 0,
+                    lastUpdateTimestamp: null
                 };
             });
+        }
+
+        function applyPersonalitySpeedMultiplier(personality, stage) {
+            if (!personality) return 1;
+            let multiplier = 1;
+            if (personality.slowStart && stage < personality.slowStart.until) {
+                multiplier *= personality.slowStart.penalty;
+            }
+            if (personality.fastStart && stage < personality.fastStart.until) {
+                multiplier *= personality.fastStart.bonus;
+            }
+            if (personality.fatigue && stage > personality.fatigue.from) {
+                const fatigueRatio = Math.min(1, (stage - personality.fatigue.from) / Math.max(0.0001, 1 - personality.fatigue.from));
+                multiplier *= 1 - (1 - personality.fatigue.penalty) * fatigueRatio;
+            }
+            if (personality.lateSurge && stage > personality.lateSurge.from) {
+                const surgeRatio = Math.min(1, (stage - personality.lateSurge.from) / Math.max(0.0001, 1 - personality.lateSurge.from));
+                multiplier *= 1 + (personality.lateSurge.multiplier - 1) * surgeRatio;
+            }
+            if (personality.midRaceBoost && stage > personality.midRaceBoost.from && stage < personality.midRaceBoost.to) {
+                multiplier *= personality.midRaceBoost.multiplier;
+            }
+            return Math.max(0.1, multiplier);
+        }
+
+        function maybeTriggerHorseEvent(racer, delta, stage, timestamp) {
+            if (!racer || racer.finishTime) return;
+            if (racer.effect || timestamp < racer.nextEventAllowedAt) return;
+            const personality = racer.personality || HORSE_PERSONALITIES.default;
+            let chance = RACE_EVENT_BASE_CHANCE * (personality.eventFrequency || 1) * delta;
+            if (personality.restWindow && stage >= personality.restWindow.from && stage <= personality.restWindow.to) {
+                chance *= personality.restWindow.chanceMultiplier || 1.2;
+            }
+            if (personality.lateSurge && stage >= personality.lateSurge.from) {
+                chance *= personality.lateSurge.eventBonus || 1;
+            }
+            if (stage >= 0.85) {
+                chance *= 1.1;
+            }
+            chance = Math.max(0, Math.min(0.8, chance));
+            if (Math.random() >= chance) {
+                return;
+            }
+            let boostBias = personality.boostBias ?? 0.5;
+            if (personality.lateSurge && stage >= personality.lateSurge.from) {
+                boostBias = Math.min(0.95, boostBias + (personality.lateSurge.boostShift || 0));
+            }
+            if (personality.restWindow && stage >= personality.restWindow.from && stage <= personality.restWindow.to) {
+                boostBias *= personality.restWindow.boostModifier || 0.8;
+            }
+            const eventType = Math.random() < boostBias ? 'boost' : 'stumble';
+            triggerHorseEvent(racer, eventType, timestamp);
+        }
+
+        function triggerHorseEvent(racer, type, timestamp) {
+            const personality = racer.personality || HORSE_PERSONALITIES.default;
+            const durationBase = type === 'boost' ? 1200 : 2100;
+            const durationVariance = type === 'boost' ? 600 : 800;
+            const duration = (durationBase + Math.random() * durationVariance) * (personality.effectDurationModifier || 1);
+            const effect = {
+                type,
+                until: timestamp + duration,
+                speedMultiplier: type === 'boost'
+                    ? (personality.boostSpeedMultiplier || 1.6)
+                    : (personality.stumbleSpeedMultiplier || 0.08),
+                burstProgress: type === 'boost'
+                    ? (0.1 + Math.random() * 0.05) * (personality.burstBonus || 1)
+                    : 0,
+                burstApplied: false
+            };
+            racer.effect = effect;
+            racer.nextEventAllowedAt = effect.until + (personality.eventCooldown || RACE_EVENT_BASE_COOLDOWN);
+            const baseMessage = pickRandomMessage(RACE_BASE_EFFECT_MESSAGES[type], type === 'boost' ? '부스터 온! ⚡' : '돌부리에 걸려 넘어짐! 😵');
+            const message = pickRandomMessage(personality.messages?.[type], baseMessage);
+            setHorseEventLabel(racer.horse.id, message, type);
+            highlightHorseLane(racer.horse.id, type);
+        }
+
+        function setHorseEventLabel(horseId, message, type) {
+            const entry = raceState.effectLabels?.get(horseId);
+            if (!entry) return;
+            const element = entry.element;
+            if (!element) return;
+            element.textContent = message;
+            element.classList.remove('text-amber-600', 'text-emerald-600', 'text-rose-500');
+            if (type === 'boost') {
+                element.classList.add('text-emerald-600');
+            } else if (type === 'stumble') {
+                element.classList.add('text-rose-500');
+            } else {
+                element.classList.add('text-amber-600');
+            }
+        }
+
+        function clearHorseEventLabel(horseId) {
+            const entry = raceState.effectLabels?.get(horseId);
+            if (!entry) return;
+            const element = entry.element;
+            if (!element) return;
+            element.textContent = entry.defaultText || '';
+            element.classList.remove('text-emerald-600', 'text-rose-500');
+            if (entry.defaultText) {
+                element.classList.add('text-amber-600');
+            } else {
+                element.classList.remove('text-amber-600');
+            }
+        }
+
+        function highlightHorseLane(horseId, type) {
+            const entry = raceState.progressElements?.get(horseId);
+            if (!entry?.lane) return;
+            entry.lane.classList.remove('race-lane-boost', 'race-lane-stumble');
+            if (type === 'boost') {
+                entry.lane.classList.add('race-lane-boost');
+            } else if (type === 'stumble') {
+                entry.lane.classList.add('race-lane-stumble');
+            }
+        }
+
+        function clearHorseLaneHighlight(horseId) {
+            const entry = raceState.progressElements?.get(horseId);
+            if (!entry?.lane) return;
+            entry.lane.classList.remove('race-lane-boost', 'race-lane-stumble');
+        }
+
+        function clearHorseEffect(horseId) {
+            clearHorseLaneHighlight(horseId);
+            clearHorseEventLabel(horseId);
         }
 
         function handleRaceStart() {
@@ -1113,9 +1491,11 @@
 
             const trackElements = raceState.progressElements;
             const speedElements = raceState.speedLabels;
+            const effectElements = raceState.effectLabels;
             const nextState = createEmptyRaceState();
             nextState.progressElements = trackElements;
             nextState.speedLabels = speedElements;
+            nextState.effectLabels = effectElements;
             raceState = nextState;
             raceState.racers = participants;
             raceState.durationMap = new Map(participants.map(item => [item.horse.id, item.duration]));
@@ -1140,26 +1520,85 @@
 
             raceState.racers.forEach(racer => {
                 if (racer.finishTime) return;
+                const personality = racer.personality || HORSE_PERSONALITIES.default;
                 const baseProgress = Math.min(1, elapsed / racer.duration);
-                const sway = Math.sin((elapsed / 200) + racer.randomPhase) * 0.02;
-                const drift = (Math.random() - 0.5) * 0.01;
-                let nextProgress = Math.min(1, Math.max(racer.progress, baseProgress + sway + drift));
-                if (elapsed < RACE_MIN_DURATION) {
-                    nextProgress = Math.min(nextProgress, 0.99);
+                const previousTimestamp = racer.lastUpdateTimestamp ?? raceState.startTimestamp;
+                const rawDelta = timestamp - previousTimestamp;
+                const delta = Math.max(16, Math.min(260, rawDelta));
+                racer.lastUpdateTimestamp = timestamp;
+                const stage = Math.min(1, elapsed / racer.duration);
+
+                if (racer.effect && timestamp >= racer.effect.until) {
+                    clearHorseEffect(racer.horse.id);
+                    racer.effect = null;
                 }
+
+                maybeTriggerHorseEvent(racer, delta, stage, timestamp);
+
+                if (racer.effect && timestamp >= racer.effect.until) {
+                    clearHorseEffect(racer.horse.id);
+                    racer.effect = null;
+                }
+
+                let speedMultiplier = applyPersonalitySpeedMultiplier(personality, stage);
+                if (racer.effect) {
+                    speedMultiplier *= racer.effect.speedMultiplier;
+                }
+
+                let randomness = (Math.random() - 0.5) * (personality.randomness || HORSE_PERSONALITIES.default.randomness) * (delta / 1000);
+                if (racer.effect?.type === 'stumble') {
+                    randomness = Math.min(randomness, 0);
+                }
+
+                let waveBonus = 0;
+                if (personality.wave) {
+                    waveBonus = Math.sin(stage * Math.PI * personality.wave.frequency + racer.randomPhase) * personality.wave.amplitude * (delta / 1000);
+                    if (racer.effect?.type === 'stumble') {
+                        waveBonus *= 0.25;
+                    }
+                }
+
+                const baseIncrement = (delta / racer.duration) * speedMultiplier;
+                let nextProgress = racer.progress + baseIncrement + randomness + waveBonus;
+
+                if (racer.effect?.type === 'boost' && !racer.effect.burstApplied) {
+                    nextProgress = Math.max(nextProgress, racer.progress + racer.effect.burstProgress);
+                    racer.effect.burstApplied = true;
+                }
+
+                if (!racer.effect || racer.effect.type !== 'stumble') {
+                    nextProgress = Math.max(nextProgress, baseProgress);
+                }
+
+                nextProgress = Math.min(1, Math.max(racer.progress, nextProgress));
+
+                if (elapsed < RACE_MIN_DURATION) {
+                    nextProgress = Math.min(nextProgress, 0.995);
+                }
+                
                 racer.progress = nextProgress;
+                
                 const trackElements = raceState.progressElements.get(racer.horse.id);
-                const progressValue = `${(nextProgress * 100).toFixed(1)}%`;
+                const progressPercent = Math.min(100 * RACE_TRACK_LENGTH_FACTOR, nextProgress * 100 * RACE_TRACK_LENGTH_FACTOR);
                 if (trackElements?.fill) {
-                    trackElements.fill.style.width = progressValue;
+                    trackElements.fill.style.width = `${progressPercent}%`;
                 }
                 if (trackElements?.icon) {
-                    trackElements.icon.style.left = progressValue;
+                    trackElements.icon.style.left = `${progressPercent}%`;
                 }
+                if (trackElements?.scroll) {
+                    const maxScroll = trackElements.scroll.scrollWidth - trackElements.scroll.clientWidth;
+                    if (maxScroll > 0) {
+                        const targetScroll = maxScroll * Math.min(1, nextProgress);
+                        trackElements.scroll.scrollLeft += (targetScroll - trackElements.scroll.scrollLeft) * 0.25;
+                    }
+                }
+                
                 const speedLabel = raceState.speedLabels.get(racer.horse.id);
                 if (speedLabel) {
                     speedLabel.textContent = `${Math.round(nextProgress * 100)}%`;
                 }
+                
                 if (elapsed >= RACE_MIN_DURATION && nextProgress >= 1 && !racer.finishTime) {
                     racer.finishTime = timestamp;
                     raceState.results.push({
@@ -1167,6 +1606,7 @@
                         finishTime: timestamp,
                         duration: timestamp - raceState.startTimestamp
                     });
+                    clearHorseEffect(racer.horse.id);
                 }
             });
 
@@ -1185,6 +1625,7 @@
             raceTimer.textContent = formatRaceTime(finalElapsed);
             setRaceInputsDisabled(false);
             raceAgainBtn.classList.remove('hidden');
+            raceState.racers.forEach(racer => clearHorseEffect(racer.horse.id));
 
             raceResultsList.innerHTML = '';
             raceState.results.sort((a, b) => a.duration - b.duration);

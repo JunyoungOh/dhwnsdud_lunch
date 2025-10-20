@@ -134,10 +134,11 @@
         .race-track-scroll {
             position: relative;
             height: clamp(16rem, 35vh, 22rem);
-            overflow-y: auto;
+            overflow-y: hidden;
+            overflow-x: auto;
             padding-right: 0.5rem;
             display: flex;
-            align-items: flex-end;
+            align-items: center;
             justify-content: center;
         }
         .race-track-scroll::-webkit-scrollbar {
@@ -152,14 +153,13 @@
         }
         .race-track {
             position: relative;
-            width: 3.5rem;
-            height: 100%;
+            width: 100%;
+            height: 3.25rem;
             border-radius: 9999px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.95));
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.95));
             border: 1px solid #e2e8f0;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
             overflow: hidden;
-            margin: 0 auto;
         }
         .race-track-inner {
             position: absolute;
@@ -170,22 +170,22 @@
         }
         .race-track-fill {
             position: absolute;
-            bottom: 0;
             left: 0;
-            width: 100%;
-            height: 0%;
+            top: 0;
+            width: 0%;
+            height: 100%;
             border-radius: inherit;
-            background: linear-gradient(180deg, #fcd34d, #f97316);
-            transition: height 0.22s ease-out;
+            background: linear-gradient(90deg, #fcd34d, #f97316);
+            transition: width 0.22s ease-out;
             box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.35);
         }
         .race-track-icon {
             position: absolute;
-            left: 50%;
-            bottom: 0%;
-            transform: translate(-50%, 50%);
+            top: 50%;
+            left: 0%;
+            transform: translate(-50%, -50%);
             font-size: 1.75rem;
-            transition: bottom 0.15s ease-out;
+            transition: left 0.15s ease-out;
             filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
             pointer-events: none;
         }
@@ -709,7 +709,6 @@
         const RACE_BASE_DURATION = 60000;
         const RACE_MAX_EXTRA_DURATION = 12000;
         const RACE_HORSE_LIMIT = 10;
-        const RACE_TRACK_LENGTH_FACTOR = 2;
         const RACE_EVENT_BASE_CHANCE = 0.00009;
         const RACE_EVENT_BASE_COOLDOWN = 1600;
         const RACE_BASE_SPEED_FACTOR = 0.9;
@@ -1215,14 +1214,14 @@
 
                 const trackOuter = document.createElement('div');
                 trackOuter.className = 'race-track';
-                trackOuter.style.height = `${RACE_TRACK_LENGTH_FACTOR * 100}%`;
+                trackOuter.style.height = 'auto';
 
                 const trackInner = document.createElement('div');
                 trackInner.className = 'race-track-inner';
 
                 const progressFill = document.createElement('div');
                 progressFill.className = 'race-track-fill';
-                progressFill.style.height = '0%';
+                progressFill.style.width = '0%';
 
                 trackInner.appendChild(progressFill);
                 trackOuter.appendChild(trackInner);
@@ -1230,16 +1229,16 @@
                 const horseIcon = document.createElement('div');
                 horseIcon.className = 'race-track-icon';
                 horseIcon.textContent = horse.icon || '🐎';
-                horseIcon.style.bottom = '0%';
+                horseIcon.style.left = '0%';
 
                 trackOuter.appendChild(horseIcon);
 
                 const trackScroll = document.createElement('div');
                 trackScroll.className = 'race-track-scroll';
                 trackScroll.appendChild(trackOuter);
-                trackScroll.scrollTop = trackScroll.scrollHeight;
+                trackScroll.scrollLeft = 0;
                 requestAnimationFrame(() => {
-                    trackScroll.scrollTop = trackScroll.scrollHeight;
+                    trackScroll.scrollLeft = 0;
                 });
 
                 lane.appendChild(header);
@@ -1615,16 +1614,16 @@
                 const trackElements = raceState.progressElements.get(racer.horse.id);
                 const progressPercent = Math.min(100, nextProgress * 100);
                 if (trackElements?.fill) {
-                    trackElements.fill.style.height = `${progressPercent}%`;
+                    trackElements.fill.style.width = `${progressPercent}%`;
                 }
                 if (trackElements?.icon) {
-                    trackElements.icon.style.bottom = `${progressPercent}%`;
+                    trackElements.icon.style.left = `${progressPercent}%`;
                 }
                 if (trackElements?.scroll) {
-                    const maxScroll = trackElements.scroll.scrollHeight - trackElements.scroll.clientHeight;
+                    const maxScroll = trackElements.scroll.scrollWidth - trackElements.scroll.clientWidth;
                     if (maxScroll > 0) {
-                        const targetScroll = maxScroll * (1 - Math.min(1, nextProgress));
-                        trackElements.scroll.scrollTop += (targetScroll - trackElements.scroll.scrollTop) * 0.25;
+                        const targetScroll = maxScroll * Math.min(1, nextProgress);
+                        trackElements.scroll.scrollLeft += (targetScroll - trackElements.scroll.scrollLeft) * 0.25;
                     }
                 }
                 

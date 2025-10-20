@@ -133,11 +133,12 @@
         }
         .race-track-scroll {
             position: relative;
-            overflow-x: auto;
-            padding-bottom: 0.25rem;
+            max-height: 16rem;
+            overflow-y: auto;
+            padding-right: 0.5rem;
         }
         .race-track-scroll::-webkit-scrollbar {
-            height: 6px;
+            width: 6px;
         }
         .race-track-scroll::-webkit-scrollbar-track {
             background: #f1f5f9;
@@ -148,13 +149,14 @@
         }
         .race-track {
             position: relative;
-            height: 2.75rem;
+            width: 3.5rem;
+            min-height: 100%;
             border-radius: 9999px;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.95));
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 245, 249, 0.95));
             border: 1px solid #e2e8f0;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
             overflow: hidden;
-            min-width: 100%;
+            margin: 0 auto;
         }
         .race-track-inner {
             position: absolute;
@@ -164,20 +166,23 @@
             overflow: hidden;
         }
         .race-track-fill {
-            height: 100%;
-            width: 0%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
             border-radius: inherit;
-            background: linear-gradient(90deg, #fcd34d, #f97316);
-            transition: width 0.22s ease-out;
+            background: linear-gradient(180deg, #fcd34d, #f97316);
+            transition: height 0.22s ease-out;
             box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.35);
         }
         .race-track-icon {
             position: absolute;
-            top: 50%;
-            left: 0%;
-            transform: translate(-50%, -50%);
+            left: 50%;
+            bottom: 0%;
+            transform: translate(-50%, 50%);
             font-size: 1.75rem;
-            transition: left 0.15s ease-out;
+            transition: bottom 0.15s ease-out;
             filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.18));
             pointer-events: none;
         }
@@ -674,14 +679,13 @@
         const startBtnDefaultLabel = startBtn ? startBtn.textContent.trim() : 'START';
         const resetBtnDefaultLabel = resetBtn ? resetBtn.textContent.trim() : 'RESET';
 
-        const RACE_MIN_DURATION = 60000;
+        const RACE_BASE_DURATION = 60000;
         const RACE_MAX_EXTRA_DURATION = 12000;
         const RACE_HORSE_LIMIT = 10;
-        const RACE_TRACK_LENGTH_FACTOR = 1;
-        const RACE_EVENT_BASE_CHANCE = 0.00018;
+        const RACE_TRACK_LENGTH_FACTOR = 2;
+        const RACE_EVENT_BASE_CHANCE = 0.00009;
         const RACE_EVENT_BASE_COOLDOWN = 1600;
         const RACE_BASE_SPEED_FACTOR = 0.9;
-        const RACE_MIN_TIME_PROGRESS_CAP = 0.965;
         const HORSE_PERSONALITIES = {
             default: {
                 name: '밸런스형',
@@ -1184,14 +1188,14 @@
 
                 const trackOuter = document.createElement('div');
                 trackOuter.className = 'race-track';
-                trackOuter.style.width = `${RACE_TRACK_LENGTH_FACTOR * 100}%`;
+                trackOuter.style.height = `${RACE_TRACK_LENGTH_FACTOR * 100}%`;
 
                 const trackInner = document.createElement('div');
                 trackInner.className = 'race-track-inner';
 
                 const progressFill = document.createElement('div');
                 progressFill.className = 'race-track-fill';
-                progressFill.style.width = '0%';
+                progressFill.style.height = '0%';
 
                 trackInner.appendChild(progressFill);
                 trackOuter.appendChild(trackInner);
@@ -1199,14 +1203,17 @@
                 const horseIcon = document.createElement('div');
                 horseIcon.className = 'race-track-icon';
                 horseIcon.textContent = horse.icon || '🐎';
-                horseIcon.style.left = '0%';
+                horseIcon.style.bottom = '0%';
 
                 trackOuter.appendChild(horseIcon);
 
                 const trackScroll = document.createElement('div');
                 trackScroll.className = 'race-track-scroll';
                 trackScroll.appendChild(trackOuter);
-                trackScroll.scrollLeft = 0;
+                trackScroll.scrollTop = trackScroll.scrollHeight;
+                requestAnimationFrame(() => {
+                    trackScroll.scrollTop = trackScroll.scrollHeight;
+                });
 
                 lane.appendChild(header);
                 lane.appendChild(statusMessage);
@@ -1334,9 +1341,9 @@
             return participants.map((horseId, index) => {
                 const horse = allHorses.find(item => item.id === horseId) || { id: horseId, name: horseId, icon: '🐎' };
                 const personality = getHorsePersonalityMeta(horse);
-                const baseDuration = (RACE_MIN_DURATION + Math.random() * RACE_MAX_EXTRA_DURATION) * (personality.baseDurationMultiplier || 1);
+                const baseDuration = (RACE_BASE_DURATION + Math.random() * RACE_MAX_EXTRA_DURATION) * (personality.baseDurationMultiplier || 1);
                 const varianceMultiplier = 1 + ((Math.random() - 0.5) * (personality.durationVariance || 0));
-                const duration = Math.max(RACE_MIN_DURATION * 0.6, baseDuration * varianceMultiplier);
+                const duration = Math.max(RACE_BASE_DURATION * 0.6, baseDuration * varianceMultiplier);
                 return {
                     horse,
                     progress: 0,
@@ -1575,35 +1582,31 @@
                 }
 
                 nextProgress = Math.min(1, Math.max(racer.progress, nextProgress));
-
-                if (elapsed < RACE_MIN_DURATION) {
-                    nextProgress = Math.min(nextProgress, RACE_MIN_TIME_PROGRESS_CAP);
-                }
                 
                 racer.progress = nextProgress;
                 
                 const trackElements = raceState.progressElements.get(racer.horse.id);
-                const progressPercent = Math.min(100 * RACE_TRACK_LENGTH_FACTOR, nextProgress * 100 * RACE_TRACK_LENGTH_FACTOR);
+                const progressPercent = Math.min(100, nextProgress * 100);
                 if (trackElements?.fill) {
-                    trackElements.fill.style.width = `${progressPercent}%`;
+                    trackElements.fill.style.height = `${progressPercent}%`;
                 }
                 if (trackElements?.icon) {
-                    trackElements.icon.style.left = `${progressPercent}%`;
+                    trackElements.icon.style.bottom = `${progressPercent}%`;
                 }
                 if (trackElements?.scroll) {
-                    const maxScroll = trackElements.scroll.scrollWidth - trackElements.scroll.clientWidth;
+                    const maxScroll = trackElements.scroll.scrollHeight - trackElements.scroll.clientHeight;
                     if (maxScroll > 0) {
-                        const targetScroll = maxScroll * Math.min(1, nextProgress);
-                        trackElements.scroll.scrollLeft += (targetScroll - trackElements.scroll.scrollLeft) * 0.25;
+                        const targetScroll = maxScroll * (1 - Math.min(1, nextProgress));
+                        trackElements.scroll.scrollTop += (targetScroll - trackElements.scroll.scrollTop) * 0.25;
                     }
                 }
                 
                 const speedLabel = raceState.speedLabels.get(racer.horse.id);
                 if (speedLabel) {
-                    speedLabel.textContent = `${Math.round(nextProgress * 100)}%`;
+                    speedLabel.textContent = nextProgress >= 1 ? '도착!' : `${Math.round(nextProgress * 100)}%`;
                 }
                 
-                if (elapsed >= RACE_MIN_DURATION && nextProgress >= 1 && !racer.finishTime) {
+                if (nextProgress >= 1 && !racer.finishTime) {
                     racer.finishTime = timestamp;
                     raceState.results.push({
                         horse: racer.horse,
@@ -1633,6 +1636,11 @@
 
             raceResultsList.innerHTML = '';
             raceState.results.sort((a, b) => a.duration - b.duration);
+            raceState.speedLabels.forEach(label => {
+                if (label) {
+                    label.textContent = '도착!';
+                }
+            });
             raceState.results.forEach((result, index) => {
                 const li = document.createElement('li');
                 li.className = 'flex items-center justify-between bg-slate-800/60 rounded-lg px-3 py-2';

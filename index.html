@@ -131,6 +131,68 @@
         .mode-hidden {
             display: none !important;
         }
+        .game-stage {
+            width: 100%;
+        }
+        #ladderCanvas {
+            width: 100%;
+            max-width: 560px;
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: inset 0 1px 3px rgba(148, 163, 184, 0.18);
+        }
+        .ladder-wrapper {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+        .ball-pool {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.9));
+            border-radius: 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            min-height: 120px;
+        }
+        .ball-item {
+            width: 72px;
+            height: 72px;
+            border-radius: 9999px;
+            background: radial-gradient(circle at 30% 30%, #fef3c7, #f59e0b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #78350f;
+            box-shadow: 0 10px 18px -12px rgba(120, 53, 15, 0.6);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .ball-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 30px -16px rgba(120, 53, 15, 0.55);
+        }
+        .ball-item-active {
+            transform: scale(1.08);
+            background: radial-gradient(circle at 30% 30%, #fef08a, #eab308);
+            color: #b45309;
+            box-shadow: 0 18px 36px -14px rgba(217, 119, 6, 0.6);
+        }
+        .ball-item-label {
+            font-size: 0.75rem;
+            text-align: center;
+            line-height: 1.1;
+            padding: 0 0.3rem;
+        }
+        .location-game-hint {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px dashed rgba(148, 163, 184, 0.6);
+        }
         .race-track {
             position: relative;
             width: 100%;
@@ -455,10 +517,22 @@
                                 </div>
                             </div>
 
-                            <div class="flex justify-center">
-                                <div class="roulette-container">
-                                    <div class="pointer"></div>
-                                    <canvas id="rouletteCanvas"></canvas>
+                            <div id="location-game-stage" class="flex flex-col items-center gap-6">
+                                <div id="roulette-stage" data-game-stage="roulette" class="game-stage flex justify-center">
+                                    <div class="roulette-container">
+                                        <div class="pointer"></div>
+                                        <canvas id="rouletteCanvas"></canvas>
+                                    </div>
+                                </div>
+                                <div id="ladder-stage" data-game-stage="ladder" class="game-stage hidden w-full max-w-2xl">
+                                    <div class="ladder-wrapper">
+                                        <canvas id="ladderCanvas"></canvas>
+                                        <p id="ladder-result-text" class="text-sm text-slate-600 text-center">사다리타기 결과가 여기 표시됩니다.</p>
+                                    </div>
+                                </div>
+                                <div id="ball-stage" data-game-stage="ball" class="game-stage hidden w-full max-w-2xl space-y-3">
+                                    <div id="ball-pool" class="ball-pool"></div>
+                                    <p id="ball-result-text" class="text-sm text-slate-600 text-center">공을 뽑으면 결과가 여기 표시됩니다.</p>
                                 </div>
                             </div>
 
@@ -487,7 +561,7 @@
                                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4 text-left">
                                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <label for="mode-select" class="font-semibold text-gray-700 flex items-center gap-2">
-                                                룰렛 모드
+                                                추천 방식
                                                 <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">평점/리뷰 기반 추천은 준비 중</span>
                                             </label>
                                             <select id="mode-select" class="rounded-md border-gray-300 shadow-sm">
@@ -496,6 +570,20 @@
                                                 <option value="random">🎲 랜덤 9</option>
                                             </select>
                                         </div>
+                                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <label for="location-game-select" class="font-semibold text-gray-700 flex items-center gap-2">
+                                                게임 방식
+                                                <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">룰렛 · 사다리 · 공 뽑기</span>
+                                            </label>
+                                            <select id="location-game-select" class="rounded-md border-gray-300 shadow-sm">
+                                                <option value="roulette">🎡 룰렛</option>
+                                                <option value="ladder">🎯 사다리타기</option>
+                                                <option value="ball">🔮 공 뽑기</option>
+                                            </select>
+                                        </div>
+                                        <p id="location-game-hint" class="location-game-hint text-xs text-slate-500 px-3 py-2 rounded-lg">
+                                            같은 후보로 원하는 게임을 선택해 점심 메뉴를 정할 수 있어요.
+                                        </p>
                                         <div id="reset-default-slot">
                                             <div id="reset-btn-wrapper">
                                                 <button id="resetBtn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-full shadow-lg">다시 불러오기</button>
@@ -640,6 +728,13 @@
         const restaurantListContainer = document.getElementById('restaurant-list-container');
         const candidateListsWrapper = document.getElementById('candidate-lists-wrapper');
         const modeSelect = document.getElementById('mode-select');
+        const locationGameSelect = document.getElementById('location-game-select');
+        const locationGameHint = document.getElementById('location-game-hint');
+        const gameStageContainers = document.querySelectorAll('[data-game-stage]');
+        const ladderCanvas = document.getElementById('ladderCanvas');
+        const ladderResultText = document.getElementById('ladder-result-text');
+        const ballPool = document.getElementById('ball-pool');
+        const ballResultText = document.getElementById('ball-result-text');
         const sharedRoulettesList = document.getElementById('shared-roulettes-list');
         const searchSharedInput = document.getElementById('search-shared');
         const applyCustomBtn = document.getElementById('apply-custom-btn');
@@ -700,6 +795,10 @@
         let restaurants = [];
         let isSpinning = false;
         let winnerIndex = -1;
+        let locationGameType = 'roulette';
+        let isLadderRunning = false;
+        let isBallDrawing = false;
+        let ballAnimationTimeouts = [];
         let blinkAnimationId;
         let db, auth, userId;
         let lastKnownCoords = null;
@@ -884,6 +983,33 @@
             RACE: 'race'
         };
 
+        const LOCATION_GAMES = {
+            roulette: {
+                label: '룰렛',
+                readyMessage: '룰렛이 준비되었습니다! START 버튼을 누르세요.',
+                manualReadyMessage: '선택한 동네의 후보가 준비되었어요! START 버튼을 눌러주세요.',
+                selectMessage: '룰렛 모드로 전환했습니다. START 버튼으로 돌려볼까요?',
+                emptyMessage: '룰렛 모드를 선택했습니다. 후보를 불러오면 바로 돌릴 수 있어요.',
+                hint: '룰렛으로 빠르게 당첨자를 뽑아보세요.'
+            },
+            ladder: {
+                label: '사다리타기',
+                readyMessage: '사다리타기가 준비되었어요! START 버튼으로 사다리를 타보세요.',
+                manualReadyMessage: '선택한 동네의 후보로 사다리판을 준비했어요! START 버튼으로 사다리를 타보세요.',
+                selectMessage: '사다리타기 모드로 전환했습니다. START 버튼으로 사다리를 타보세요.',
+                emptyMessage: '사다리타기를 하려면 후보가 필요해요. 주변 식당을 불러와 볼까요?',
+                hint: '랜덤으로 생성된 사다리를 타고 결과를 확인해요.'
+            },
+            ball: {
+                label: '공 뽑기',
+                readyMessage: '공 뽑기 준비 완료! 행운의 공을 뽑아볼까요?',
+                manualReadyMessage: '선택한 동네의 후보로 공을 준비해두었어요! START 버튼으로 공을 뽑아보세요.',
+                selectMessage: '공 뽑기 모드로 전환했습니다. START 버튼으로 공을 뽑아보세요.',
+                emptyMessage: '공 뽑기는 두 개 이상의 후보가 필요해요. 후보를 불러와 주세요.',
+                hint: '후보 이름이 적힌 공을 굴려 행운의 선택을 만나보세요.'
+            }
+        };
+
         const modeMeta = {
             [Mode.LOCATION]: {
                 badge: '📍 위치기반 모드',
@@ -941,6 +1067,15 @@
         syncCustomSlotCountDisplay(customSegmentCount);
         renderCustomInputs();
         syncTeamSlotCountInput(segmentCount);
+        if (locationGameSelect) {
+            locationGameSelect.value = locationGameType;
+        }
+        updateLocationGameStageVisibility();
+        resetLocationGameVisuals();
+        if (locationGameHint) {
+            const meta = getLocationGameMeta();
+            locationGameHint.textContent = `${meta.label} 모드: ${meta.hint}`;
+        }
 
         // --- 초기화 ---
         window.onload = () => {
@@ -1794,6 +1929,12 @@
                     leaveTeamMode({ silent: true });
                 }
                 attemptAutoDiscovery();
+                updateLocationGameStageVisibility();
+                updateLocationGameDisplays();
+                if (locationGameHint) {
+                    const meta = getLocationGameMeta();
+                    locationGameHint.textContent = `${meta.label} 모드: ${meta.hint}`;
+                }
             } else if (mode === Mode.TEAM) {
                 if (!teamMode) {
                     resetState(true);
@@ -1820,6 +1961,7 @@
                 locationFallback.classList.add('hidden');
             }
 
+            updateLocationGameStageVisibility();
             updateStartButtonState();
         }
 
@@ -1851,6 +1993,415 @@
             return String(text).replace(/[&<>"']/g, char => textEscapes[char] || char);
         }
 
+        function getLocationGameMeta(type = locationGameType) {
+            return LOCATION_GAMES[type] || LOCATION_GAMES.roulette;
+        }
+
+        function shortenText(text = '', limit = 8) {
+            const raw = typeof text === 'string' ? text.trim() : String(text || '');
+            if (raw.length <= limit) return raw;
+            return `${raw.slice(0, Math.max(1, limit - 1))}…`;
+        }
+
+        function updateLocationGameStageVisibility() {
+            if (!gameStageContainers) return;
+            const activeType = currentMode === Mode.LOCATION ? locationGameType : 'roulette';
+            gameStageContainers.forEach(stage => {
+                const stageType = stage.dataset.gameStage;
+                stage.classList.toggle('hidden', stageType !== activeType);
+            });
+            if (locationGameSelect && currentMode === Mode.LOCATION && locationGameSelect.value !== locationGameType) {
+                locationGameSelect.value = locationGameType;
+            }
+        }
+
+        function getLocationGameParticipants() {
+            return restaurants.filter(item => item && item.id !== 'reroll');
+        }
+
+        function isLocationGameBusy() {
+            if (locationGameType === 'ladder') return isLadderRunning;
+            if (locationGameType === 'ball') return isBallDrawing;
+            return isSpinning;
+        }
+
+        function updateLocationGameDisplays() {
+            const participants = getLocationGameParticipants();
+            renderLadderPreview(participants);
+            renderBallPool(participants);
+        }
+
+        function resetLocationGameVisuals() {
+            stopBallAnimation();
+            if (winnerCard) {
+                winnerCard.classList.add('hidden');
+            }
+            if (canvas) {
+                canvas.classList.remove('blinking');
+            }
+            if (ladderResultText) {
+                ladderResultText.textContent = '사다리타기 결과가 여기 표시됩니다.';
+            }
+            if (ballResultText) {
+                ballResultText.textContent = '공을 뽑으면 결과가 여기 표시됩니다.';
+            }
+            updateLocationGameDisplays();
+        }
+
+        function setLocationGameType(type) {
+            const normalized = Object.prototype.hasOwnProperty.call(LOCATION_GAMES, type) ? type : 'roulette';
+            if (locationGameType === normalized) {
+                updateLocationGameStageVisibility();
+                if (locationGameHint) {
+                    const meta = getLocationGameMeta();
+                    locationGameHint.textContent = `${meta.label} 모드: ${meta.hint}`;
+                }
+                return;
+            }
+            locationGameType = normalized;
+            updateLocationGameStageVisibility();
+            resetLocationGameVisuals();
+            if (locationGameHint) {
+                const meta = getLocationGameMeta();
+                locationGameHint.textContent = `${meta.label} 모드: ${meta.hint}`;
+            }
+            if (currentMode === Mode.LOCATION && !teamMode) {
+                const meta = getLocationGameMeta();
+                const participants = getLocationGameParticipants();
+                statusMessage.textContent = participants.length === 0 ? meta.emptyMessage : meta.selectMessage;
+            }
+            updateStartButtonState();
+        }
+
+        function prepareLadderDrawing(participantCount = 2) {
+            if (!ladderCanvas) return null;
+            const count = Math.max(2, participantCount);
+            const containerWidth = ladderCanvas.parentElement ? ladderCanvas.parentElement.clientWidth : ladderCanvas.clientWidth || 480;
+            const width = Math.min(containerWidth || 480, 640);
+            const height = Math.max(320, count * 60);
+            const dpr = window.devicePixelRatio || 1;
+            const ctx = ladderCanvas.getContext('2d');
+            ladderCanvas.width = width * dpr;
+            ladderCanvas.height = height * dpr;
+            ladderCanvas.style.width = `${width}px`;
+            ladderCanvas.style.height = `${height}px`;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, width, height);
+            const leftPadding = 50;
+            const rightPadding = 50;
+            const topPadding = 60;
+            const bottomPadding = 90;
+            const innerWidth = Math.max(10, width - leftPadding - rightPadding);
+            const columnPositions = Array.from({ length: count }, (_, idx) => {
+                if (count === 1) {
+                    return width / 2;
+                }
+                const spacing = innerWidth / (count - 1);
+                return leftPadding + spacing * idx;
+            });
+            return {
+                ctx,
+                width,
+                height,
+                topPadding,
+                bottomPadding,
+                leftPadding,
+                rightPadding,
+                columnPositions,
+                participantCount: count
+            };
+        }
+
+        function generateLadderRungs(participantCount, drawing) {
+            if (!drawing || participantCount < 2) return [];
+            const rungTarget = Math.max(6, participantCount * 2);
+            const verticalSpace = drawing.height - drawing.topPadding - drawing.bottomPadding;
+            const minGap = verticalSpace / (rungTarget + 1);
+            const rungs = [];
+            let attempts = 0;
+            while (rungs.length < rungTarget && attempts < rungTarget * 8) {
+                attempts += 1;
+                const column = Math.floor(Math.random() * (participantCount - 1));
+                const baseY = drawing.topPadding + (rungs.length + 1) * minGap;
+                const jitter = (Math.random() - 0.5) * minGap * 0.6;
+                const y = Math.max(drawing.topPadding + 10, Math.min(drawing.height - drawing.bottomPadding - 10, baseY + jitter));
+                if (rungs.some(r => r.column === column && Math.abs(r.y - y) < minGap * 0.6)) continue;
+                rungs.push({ column, y });
+            }
+            rungs.sort((a, b) => a.y - b.y);
+            return rungs;
+        }
+
+        function drawLadderBase(ctx, drawing, rungs = []) {
+            if (!ctx || !drawing) return;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#cbd5f5';
+            ctx.lineWidth = 3;
+            drawing.columnPositions.forEach((x) => {
+                ctx.beginPath();
+                ctx.moveTo(x, drawing.topPadding);
+                ctx.lineTo(x, drawing.height - drawing.bottomPadding);
+                ctx.stroke();
+            });
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 2;
+            rungs.forEach(rung => {
+                const startX = drawing.columnPositions[rung.column];
+                const endX = drawing.columnPositions[rung.column + 1];
+                ctx.beginPath();
+                ctx.moveTo(startX, rung.y);
+                ctx.lineTo(endX, rung.y);
+                ctx.stroke();
+            });
+        }
+
+        function drawLadderEmptyMessage(ctx, drawing, message) {
+            if (!ctx || !drawing) return;
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = "14px 'Noto Sans KR'";
+            ctx.textAlign = 'center';
+            ctx.fillText(message, drawing.width / 2, drawing.height / 2);
+        }
+
+        function drawLadderLabels(ctx, drawing, participants = [], highlightIndex = null) {
+            if (!ctx || !drawing) return;
+            ctx.font = "12px 'Noto Sans KR'";
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'center';
+            drawing.columnPositions.forEach((x, index) => {
+                ctx.fillText(`${index + 1}`, x, drawing.topPadding - 20);
+            });
+            ctx.font = "bold 13px 'Noto Sans KR'";
+            drawing.columnPositions.forEach((x, index) => {
+                const participant = participants[index];
+                if (!participant) return;
+                ctx.fillStyle = index === highlightIndex ? '#16a34a' : '#1f2937';
+                ctx.fillText(shortenText(participant.place_name, 8), x, drawing.height - drawing.bottomPadding + 32);
+            });
+        }
+
+        function computeLadderPath(drawing, rungs, startColumn) {
+            let column = startColumn;
+            const points = [{ x: drawing.columnPositions[column], y: drawing.topPadding }];
+            rungs.forEach(rung => {
+                const currentX = drawing.columnPositions[column];
+                points.push({ x: currentX, y: rung.y });
+                if (column === rung.column) {
+                    column += 1;
+                    points.push({ x: drawing.columnPositions[column], y: rung.y });
+                } else if (column === rung.column + 1) {
+                    column -= 1;
+                    points.push({ x: drawing.columnPositions[column], y: rung.y });
+                }
+            });
+            points.push({ x: drawing.columnPositions[column], y: drawing.height - drawing.bottomPadding });
+            return { finalColumn: column, points };
+        }
+
+        function drawLadderPath(ctx, points = []) {
+            if (!ctx || !points.length) return;
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.stroke();
+        }
+
+        function drawLadderMarkers(ctx, drawing, startColumn, finalColumn) {
+            if (!ctx || !drawing) return;
+            ctx.fillStyle = '#f97316';
+            ctx.beginPath();
+            ctx.arc(drawing.columnPositions[startColumn], drawing.topPadding - 28, 7, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.arc(drawing.columnPositions[finalColumn], drawing.height - drawing.bottomPadding + 40, 9, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function renderLadderPreview(participants = []) {
+            if (!ladderCanvas) return;
+            const drawing = prepareLadderDrawing(participants.length);
+            if (!drawing) return;
+            if (participants.length < 2) {
+                drawLadderBase(drawing.ctx, drawing, []);
+                drawLadderEmptyMessage(drawing.ctx, drawing, '후보가 준비되면 사다리판이 만들어져요.');
+                if (ladderResultText) {
+                    ladderResultText.textContent = '후보가 2개 이상 모이면 사다리를 탈 수 있어요.';
+                }
+                return;
+            }
+            const rungs = generateLadderRungs(participants.length, drawing);
+            drawLadderBase(drawing.ctx, drawing, rungs);
+            drawLadderLabels(drawing.ctx, drawing, participants);
+            if (ladderResultText) {
+                ladderResultText.textContent = 'START 버튼으로 사다리를 타보세요.';
+            }
+        }
+
+        function playLadderGame() {
+            const participants = getLocationGameParticipants();
+            if (participants.length < 2) {
+                statusMessage.textContent = '사다리타기를 하려면 최소 2개의 후보가 필요해요.';
+                return;
+            }
+            if (!ladderCanvas) {
+                statusMessage.textContent = '사다리 화면을 준비하지 못했습니다.';
+                return;
+            }
+            stopBallAnimation();
+            if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+            canvas.classList.remove('blinking');
+            winnerCard.classList.add('hidden');
+            isLadderRunning = true;
+            updateStartButtonState();
+            const drawing = prepareLadderDrawing(participants.length);
+            if (!drawing) {
+                isLadderRunning = false;
+                updateStartButtonState();
+                statusMessage.textContent = '사다리판을 준비하지 못했습니다.';
+                return;
+            }
+            const rungs = generateLadderRungs(participants.length, drawing);
+            drawLadderBase(drawing.ctx, drawing, rungs);
+            const startColumn = Math.floor(Math.random() * participants.length);
+            const pathInfo = computeLadderPath(drawing, rungs, startColumn);
+            drawLadderPath(drawing.ctx, pathInfo.points);
+            drawLadderMarkers(drawing.ctx, drawing, startColumn, pathInfo.finalColumn);
+            drawLadderLabels(drawing.ctx, drawing, participants, pathInfo.finalColumn);
+            const winner = participants[pathInfo.finalColumn];
+            if (ladderResultText) {
+                ladderResultText.innerHTML = `랜덤으로 선택된 ${startColumn + 1}번 사다리의 결과는 <span class="font-semibold text-emerald-600">${safeText(winner.place_name)}</span>!`;
+            }
+            statusMessage.innerHTML = `사다리타기 결과는 <span class="font-bold text-emerald-600">${safeText(winner.place_name)}</span>!`;
+            populateWinnerCard(winner);
+            winnerCard.classList.remove('hidden');
+            isLadderRunning = false;
+            updateStartButtonState();
+        }
+
+        function stopBallAnimation() {
+            if (ballAnimationTimeouts.length) {
+                ballAnimationTimeouts.forEach(id => clearTimeout(id));
+                ballAnimationTimeouts = [];
+            }
+            if (ballPool) {
+                ballPool.querySelectorAll('.ball-item').forEach(ball => ball.classList.remove('ball-item-active'));
+            }
+            isBallDrawing = false;
+        }
+
+        function renderBallPool(participants = []) {
+            if (!ballPool) return;
+            ballPool.innerHTML = '';
+            if (participants.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'text-sm text-slate-500 text-center w-full';
+                empty.textContent = '후보가 준비되면 공을 자동으로 채워드려요.';
+                ballPool.appendChild(empty);
+                if (ballResultText) {
+                    ballResultText.textContent = '후보가 준비되면 공을 뽑을 수 있어요.';
+                }
+                return;
+            }
+            if (participants.length < 2) {
+                const notice = document.createElement('p');
+                notice.className = 'text-sm text-slate-500 text-center w-full';
+                notice.textContent = '후보가 두 개 이상 모여야 공을 뽑을 수 있어요.';
+                ballPool.appendChild(notice);
+                if (ballResultText) {
+                    ballResultText.textContent = '후보를 더 추가해 주세요.';
+                }
+                return;
+            }
+            participants.forEach((participant, index) => {
+                const ball = document.createElement('div');
+                ball.className = 'ball-item';
+                ball.dataset.index = String(index);
+                ball.title = participant.place_name || '';
+                const label = document.createElement('span');
+                label.className = 'ball-item-label';
+                label.textContent = shortenText(participant.place_name, 5);
+                ball.appendChild(label);
+                ballPool.appendChild(ball);
+            });
+            if (ballResultText) {
+                ballResultText.textContent = 'START 버튼으로 공을 뽑아보세요.';
+            }
+        }
+
+        function finalizeBallWinner(winner) {
+            if (!winner) {
+                statusMessage.textContent = '당첨자를 확인하지 못했습니다.';
+                isBallDrawing = false;
+                updateStartButtonState();
+                return;
+            }
+            if (ballResultText) {
+                ballResultText.innerHTML = `행운의 공은 <span class="font-semibold text-emerald-600">${safeText(winner.place_name)}</span>!`;
+            }
+            statusMessage.innerHTML = `공 뽑기 결과는 <span class="font-bold text-emerald-600">${safeText(winner.place_name)}</span>!`;
+            populateWinnerCard(winner);
+            winnerCard.classList.remove('hidden');
+            isBallDrawing = false;
+            updateStartButtonState();
+            if (ballAnimationTimeouts.length) {
+                ballAnimationTimeouts.forEach(id => clearTimeout(id));
+                ballAnimationTimeouts = [];
+            }
+        }
+
+        function playBallDrawGame() {
+            const participants = getLocationGameParticipants();
+            if (participants.length < 2) {
+                statusMessage.textContent = '공 뽑기는 두 개 이상의 후보가 필요해요.';
+                return;
+            }
+            stopBallAnimation();
+            if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+            canvas.classList.remove('blinking');
+            winnerCard.classList.add('hidden');
+            let balls = Array.from(ballPool?.querySelectorAll('.ball-item') || []);
+            if (balls.length !== participants.length) {
+                renderBallPool(participants);
+                balls = Array.from(ballPool?.querySelectorAll('.ball-item') || []);
+            }
+            if (balls.length !== participants.length) {
+                statusMessage.textContent = '공을 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+                return;
+            }
+            isBallDrawing = true;
+            updateStartButtonState();
+            const winnerIndex = Math.floor(Math.random() * participants.length);
+            const totalCycles = participants.length * 5 + Math.floor(Math.random() * participants.length) + 8;
+            const sequence = [];
+            for (let i = 0; i < totalCycles; i++) {
+                sequence.push(i % participants.length);
+            }
+            sequence.push(winnerIndex);
+            const stepDuration = 120;
+            sequence.forEach((seqIndex, step) => {
+                const timeoutId = setTimeout(() => {
+                    balls.forEach(ball => ball.classList.remove('ball-item-active'));
+                    const targetBall = balls[seqIndex];
+                    if (targetBall) {
+                        targetBall.classList.add('ball-item-active');
+                    }
+                    if (step === sequence.length - 1) {
+                        finalizeBallWinner(participants[seqIndex]);
+                    }
+                }, step * stepDuration);
+                ballAnimationTimeouts.push(timeoutId);
+            });
+        }
+
         function updateStartButtonState() {
             if (currentMode === Mode.RACE) {
                 const selectedCount = selectedHorseIds.size;
@@ -1864,6 +2415,16 @@
                 const allFilled = teamSlots.every(slot => typeof slot === 'string' && slot.trim() !== '');
                 startBtn.disabled = isSpinning || !allFilled;
                 resetBtn.disabled = isSpinning;
+                return;
+            }
+            if (currentMode === Mode.LOCATION) {
+                const locationBusy = isLocationGameBusy();
+                const participants = getLocationGameParticipants();
+                const ready = locationGameType === 'roulette'
+                    ? restaurants.length >= segmentCount
+                    : participants.length >= 2;
+                startBtn.disabled = locationBusy || !ready;
+                resetBtn.disabled = locationBusy;
             } else {
                 startBtn.disabled = isSpinning || restaurants.length < segmentCount;
                 resetBtn.disabled = isSpinning;
@@ -2266,6 +2827,7 @@
         modeButtons.forEach(button => {
             button.addEventListener('click', () => setMode(button.dataset.modeTarget));
         });
+        locationGameSelect?.addEventListener('change', () => setLocationGameType(locationGameSelect.value));
         homeBtn.addEventListener('click', returnToLanding);
         resetBtn.addEventListener('click', () => handleReset());
         startBtn.addEventListener('click', handleStart);
@@ -2363,7 +2925,7 @@
                 resetRaceMode();
                 return;
             }
-            if (isSpinning) return;
+            if (isSpinning || isLocationGameBusy()) return;
             if (teamMode) {
                 resetBtn.disabled = true;
                 clearTeamSlots().finally(() => updateStartButtonState());
@@ -2399,6 +2961,7 @@
             canvas.style.transform = `rotate(0deg)`;
             canvas.classList.remove('blinking');
             if (blinkAnimationId) cancelAnimationFrame(blinkAnimationId);
+            resetLocationGameVisuals();
             drawWheel();
             winnerCard.classList.add('hidden');
             if (!keepStatus) {
@@ -2519,6 +3082,19 @@
                     updateStartButtonState();
                 }
                 return;
+            }
+
+            if (currentMode === Mode.LOCATION) {
+                if (locationGameType === 'ladder') {
+                    if (isLadderRunning) return;
+                    playLadderGame();
+                    return;
+                }
+                if (locationGameType === 'ball') {
+                    if (isBallDrawing) return;
+                    playBallDrawGame();
+                    return;
+                }
             }
 
             if (restaurants.length < segmentCount) return;
@@ -2673,7 +3249,19 @@
             }
 
             restaurants = placesForRoulette.slice(0, segmentCount);
-            statusMessage.textContent = source === 'manual' ? '선택한 동네의 후보가 준비되었어요! START를 눌러주세요.' : '룰렛이 준비되었습니다! START 버튼을 누르세요.';
+            if (currentMode === Mode.LOCATION && !teamMode) {
+                const gameMeta = getLocationGameMeta();
+                const readyMessage = source === 'manual' ? gameMeta.manualReadyMessage : gameMeta.readyMessage;
+                statusMessage.textContent = readyMessage;
+                if (locationGameHint) {
+                    locationGameHint.textContent = `${gameMeta.label} 모드: ${gameMeta.hint}`;
+                }
+            } else {
+                statusMessage.textContent = source === 'manual'
+                    ? '선택한 동네의 후보가 준비되었어요! START를 눌러주세요.'
+                    : '룰렛이 준비되었습니다! START 버튼을 누르세요.';
+            }
+            updateLocationGameDisplays();
             updateStartButtonState();
             saveContainer.classList.remove('hidden');
             rouletteNameInput.value = '';

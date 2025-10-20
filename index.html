@@ -168,7 +168,7 @@
             width: 0%;
             border-radius: inherit;
             background: linear-gradient(90deg, #fcd34d, #f97316);
-            transition: width 0.15s ease-out;
+            transition: width 0.22s ease-out;
             box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.35);
         }
         .race-track-icon {
@@ -188,23 +188,25 @@
             transition: transform 0.3s ease, filter 0.3s ease;
         }
         .race-lane-boost {
-            transform: scale(1.02);
+            transform: scale(1.035);
+            filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.35));
         }
         .race-lane-boost .race-track-fill {
-            animation: raceBoostPulse 0.45s ease-in-out infinite alternate;
+            animation: raceBoostPulse 0.4s ease-in-out infinite alternate;
         }
         .race-lane-stumble {
-            filter: grayscale(0.25);
+            filter: grayscale(0.35) brightness(0.92);
+            opacity: 0.82;
         }
         .race-lane-stumble .race-track-icon {
             animation: raceStumbleShake 0.6s ease-in-out infinite;
         }
         @keyframes raceBoostPulse {
             0% {
-                box-shadow: inset 0 0 12px rgba(251, 191, 36, 0.45);
+                box-shadow: inset 0 0 16px rgba(251, 191, 36, 0.5), 0 0 6px rgba(251, 191, 36, 0.35);
             }
             100% {
-                box-shadow: inset 0 0 18px rgba(251, 146, 60, 0.6);
+                box-shadow: inset 0 0 24px rgba(251, 146, 60, 0.75), 0 0 10px rgba(251, 146, 60, 0.45);
             }
         }
         @keyframes raceStumbleShake {
@@ -212,10 +214,10 @@
                 transform: translate(-50%, -50%) rotate(0deg);
             }
             25% {
-                transform: translate(calc(-50% + 2px), calc(-50% - 2px)) rotate(-10deg);
+                transform: translate(calc(-50% + 3px), calc(-50% - 3px)) rotate(-12deg);
             }
             50% {
-                transform: translate(calc(-50% - 2px), calc(-50% + 2px)) rotate(8deg);
+                transform: translate(calc(-50% - 3px), calc(-50% + 3px)) rotate(10deg);
             }
             75% {
                 transform: translate(calc(-50% + 1px), calc(-50% + 1px)) rotate(-6deg);
@@ -672,12 +674,14 @@
         const startBtnDefaultLabel = startBtn ? startBtn.textContent.trim() : 'START';
         const resetBtnDefaultLabel = resetBtn ? resetBtn.textContent.trim() : 'RESET';
 
-        const RACE_MIN_DURATION = 30000;
+        const RACE_MIN_DURATION = 60000;
         const RACE_MAX_EXTRA_DURATION = 12000;
         const RACE_HORSE_LIMIT = 10;
         const RACE_TRACK_LENGTH_FACTOR = 1;
         const RACE_EVENT_BASE_CHANCE = 0.00018;
         const RACE_EVENT_BASE_COOLDOWN = 1600;
+        const RACE_BASE_SPEED_FACTOR = 0.9;
+        const RACE_MIN_TIME_PROGRESS_CAP = 0.965;
         const HORSE_PERSONALITIES = {
             default: {
                 name: '밸런스형',
@@ -1401,17 +1405,17 @@
 
         function triggerHorseEvent(racer, type, timestamp) {
             const personality = racer.personality || HORSE_PERSONALITIES.default;
-            const durationBase = type === 'boost' ? 1200 : 2100;
-            const durationVariance = type === 'boost' ? 600 : 800;
+            const durationBase = type === 'boost' ? 1500 : 2400;
+            const durationVariance = type === 'boost' ? 800 : 1100;
             const duration = (durationBase + Math.random() * durationVariance) * (personality.effectDurationModifier || 1);
             const effect = {
                 type,
                 until: timestamp + duration,
                 speedMultiplier: type === 'boost'
-                    ? (personality.boostSpeedMultiplier || 1.6)
-                    : (personality.stumbleSpeedMultiplier || 0.08),
+                    ? (personality.boostSpeedMultiplier || 1.85)
+                    : (personality.stumbleSpeedMultiplier || 0.06),
                 burstProgress: type === 'boost'
-                    ? (0.1 + Math.random() * 0.05) * (personality.burstBonus || 1)
+                    ? (0.14 + Math.random() * 0.06) * (personality.burstBonus || 1.05)
                     : 0,
                 burstApplied: false
             };
@@ -1558,7 +1562,7 @@
                     }
                 }
 
-                const baseIncrement = (delta / racer.duration) * speedMultiplier;
+                const baseIncrement = (delta / racer.duration) * speedMultiplier * RACE_BASE_SPEED_FACTOR;
                 let nextProgress = racer.progress + baseIncrement + randomness + waveBonus;
 
                 if (racer.effect?.type === 'boost' && !racer.effect.burstApplied) {
@@ -1573,7 +1577,7 @@
                 nextProgress = Math.min(1, Math.max(racer.progress, nextProgress));
 
                 if (elapsed < RACE_MIN_DURATION) {
-                    nextProgress = Math.min(nextProgress, 0.995);
+                    nextProgress = Math.min(nextProgress, RACE_MIN_TIME_PROGRESS_CAP);
                 }
                 
                 racer.progress = nextProgress;

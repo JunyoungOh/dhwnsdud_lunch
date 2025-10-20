@@ -4,13 +4,110 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>오늘 뭐 먹지? 룰렛 (DB 연동)</title>
+    <meta property="og:title" content="오늘 뭐 먹지? 점심 룰렛" />
+    <meta property="og:description" content="선택고민을 덜어주며 즐거움 한 스푼을 더 할 점심 추천 멀티 게임 허브" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://dummyimage.com/1200x630/fbf5ff/4338ca&text=오늘+뭐+먹지%3F" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        brand: ['"Pretendard"', '"Noto Sans KR"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            amber: '#f59f0b',
+                            indigo: '#4c51bf',
+                            slate: '#0f172a'
+                        }
+                    },
+                    boxShadow: {
+                        brand: '0 20px 45px -22px rgba(79, 70, 229, 0.55)',
+                        brandSoft: '0 25px 60px -28px rgba(15, 23, 42, 0.35)'
+                    }
+                }
+            }
+        };
+    </script>
     <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=9ddcc83d3b7ed7f48495e2de9a0a4460&libraries=services"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Pretendard:wght@400;600;700&display=swap');
         body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f8fafc;
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            background: radial-gradient(120% 120% at 0% 0%, rgba(226, 232, 255, 0.65) 0%, rgba(241, 245, 249, 0.25) 45%, rgba(251, 191, 36, 0.16) 100%);
+            color: #0f172a;
+        }
+        .top-nav-blur {
+            background: rgba(248, 250, 252, 0.5);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 22px 44px -32px rgba(15, 23, 42, 0.35);
+        }
+        .floating-nav {
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(18px);
+            border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            box-shadow: 0 25px 60px -30px rgba(15, 23, 42, 0.55);
+            padding: 0.4rem 0.6rem;
+        }
+        .floating-nav button {
+            color: rgba(248, 250, 252, 0.78);
+            transition: all 0.2s ease;
+        }
+        .floating-nav button:hover {
+            color: #fef3c7;
+            transform: translateY(-1px) scale(1.05);
+        }
+        .floating-nav button.mode-button-active {
+            background: rgba(248, 250, 252, 0.16) !important;
+            color: #fef08a !important;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            box-shadow: 0 35px 80px -50px rgba(79, 70, 229, 0.45);
+            backdrop-filter: blur(18px);
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, rgba(254, 243, 199, 0.6), rgba(199, 210, 254, 0.65));
+        }
+        .mode-panel {
+            position: relative;
+            opacity: 0;
+            transform: translateY(12px) scale(0.985);
+        }
+        .mode-panel.mode-hidden {
+            pointer-events: none;
+        }
+        .mode-panel-active {
+            animation: fadeSlideIn 0.35s ease forwards;
+        }
+        @keyframes fadeSlideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(16px) scale(0.98);
+            }
+            100% {
+                opacity: 1;
+                transform: none;
+            }
+        }
+        .mode-hidden-hard {
+            display: none !important;
+        }
+        .mode-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border-radius: 9999px;
+            background: rgba(15, 23, 42, 0.06);
+            padding: 0.4rem 0.9rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #334155;
         }
         .roulette-container {
             position: relative;
@@ -58,44 +155,57 @@
             background: #64748b;
         }
         .mode-button {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            transition: all 0.35s cubic-bezier(0.33, 1, 0.68, 1);
             color: #0f172a;
+            backdrop-filter: blur(14px);
+        }
+        .mode-button::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         .mode-button:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 35px -15px rgba(30, 64, 175, 0.35);
+            transform: translateY(-3px) scale(1.01);
+            box-shadow: var(--shadow-elevated, 0 25px 48px -28px rgba(30, 64, 175, 0.45));
+        }
+        .mode-button:hover::after {
+            opacity: 1;
         }
         .mode-button-active {
-            background-color: #111827 !important;
+            background: linear-gradient(140deg, rgba(15, 23, 42, 0.92), rgba(79, 70, 229, 0.82)) !important;
             color: #f8fafc !important;
-            box-shadow: 0 25px 50px -12px rgba(30, 64, 175, 0.45);
+            box-shadow: 0 25px 60px -24px rgba(79, 70, 229, 0.6);
+        }
+        .mode-button-active::after {
+            border-color: rgba(248, 250, 252, 0.35);
+            opacity: 1;
         }
         #landing-screen {
-            background: linear-gradient(135deg, #fef9c3, #e0f2fe);
+            background: linear-gradient(165deg, rgba(250, 245, 255, 0.55), rgba(226, 240, 255, 0.48));
         }
-        #landing-screen-mobile {
-            display: none;
-            background: linear-gradient(165deg, #fef3c7, #bfdbfe);
-        }
-        #landing-screen.hidden,
-        #landing-screen-mobile.hidden {
+        #landing-screen.hidden {
             display: none !important;
         }
         .mode-button-location {
-            background: linear-gradient(135deg, rgba(254, 243, 199, 0.95), rgba(253, 230, 138, 0.95));
-            box-shadow: 0 18px 40px -20px rgba(217, 119, 6, 0.65);
+            background: linear-gradient(145deg, rgba(253, 244, 215, 0.75), rgba(250, 204, 21, 0.35));
+            box-shadow: 0 22px 48px -28px rgba(217, 119, 6, 0.5);
         }
         .mode-button-team {
-            background: linear-gradient(135deg, rgba(209, 250, 229, 0.95), rgba(167, 243, 208, 0.95));
-            box-shadow: 0 18px 40px -20px rgba(16, 185, 129, 0.6);
+            background: linear-gradient(145deg, rgba(222, 255, 243, 0.78), rgba(16, 185, 129, 0.2));
+            box-shadow: 0 22px 48px -28px rgba(16, 185, 129, 0.4);
         }
         .mode-button-custom {
-            background: linear-gradient(135deg, rgba(237, 233, 254, 0.95), rgba(199, 210, 254, 0.95));
-            box-shadow: 0 18px 40px -20px rgba(79, 70, 229, 0.55);
+            background: linear-gradient(145deg, rgba(233, 233, 254, 0.78), rgba(129, 140, 248, 0.25));
+            box-shadow: 0 22px 48px -28px rgba(79, 70, 229, 0.45);
         }
         .mode-button-race {
-            background: linear-gradient(135deg, rgba(254, 226, 226, 0.95), rgba(254, 202, 202, 0.95));
-            box-shadow: 0 18px 40px -20px rgba(239, 68, 68, 0.55);
+            background: linear-gradient(145deg, rgba(254, 228, 226, 0.78), rgba(244, 114, 182, 0.25));
+            box-shadow: 0 22px 48px -28px rgba(244, 63, 94, 0.45);
         }
         .mode-button-badge {
             font-size: 0.75rem;
@@ -113,10 +223,6 @@
             font-size: 0.95rem;
             color: #4b5563;
         }
-        .mode-tab-label {
-            font-weight: 600;
-            color: #1f2937;
-        }
         .mode-button-arrow {
             font-size: 1.75rem;
             color: #cbd5f5;
@@ -124,7 +230,6 @@
         .mode-button-active .mode-button-badge,
         .mode-button-active .mode-button-title,
         .mode-button-active .mode-button-subtitle,
-        .mode-button-active .mode-tab-label,
         .mode-button-active .mode-button-arrow {
             color: #f8fafc !important;
         }
@@ -327,135 +432,122 @@
             }
         }
         @media (max-width: 640px) {
-            #landing-screen {
-                display: none;
+            .mode-button-title {
+                font-size: 1.25rem;
             }
-            #landing-screen-mobile {
-                display: flex;
+            .mode-button-subtitle {
+                font-size: 0.85rem;
             }
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="min-h-screen flex flex-col">
-        <section id="landing-screen" class="flex-1 flex flex-col items-center justify-center px-4 py-16 text-center">
-            <div class="max-w-2xl mx-auto space-y-10 bg-white/70 backdrop-blur-sm rounded-3xl p-10 shadow-xl">
-                <div class="space-y-3">
-                    <h1 class="text-4xl sm:text-5xl font-bold text-gray-900">오늘 뭐 먹지?</h1>
-                    <p class="text-gray-600 text-base sm:text-lg">네 가지 방식으로 점심 고민을 단번에 해결해 보세요.</p>
+<body class="min-h-screen antialiased text-slate-900">
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div class="absolute -left-20 -top-10 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-amber-200/70 via-amber-100/40 to-transparent blur-3xl"></div>
+        <div class="absolute right-0 top-24 h-[560px] w-[560px] rounded-full bg-gradient-to-br from-indigo-200/70 via-indigo-100/40 to-transparent blur-3xl"></div>
+    </div>
+    <div class="relative min-h-screen flex flex-col">
+        <header class="top-nav-blur sticky top-0 z-40">
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 sm:px-8">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-indigo-500 text-white shadow-brand">
+                        <span class="text-xl">🍽️</span>
+                    </div>
+                    <div class="flex flex-col text-left">
+                        <span class="text-[0.65rem] uppercase tracking-[0.35em] text-slate-500">오늘 뭐 먹지?</span>
+                        <span class="font-brand text-lg font-bold text-brand-slate sm:text-xl">Lunch Roulette Lab</span>
+                    </div>
                 </div>
-                <div class="grid gap-4">
-                    <button class="mode-button mode-button-location flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent text-left" data-mode-target="location">
-                        <div class="space-y-2">
-                            <span class="mode-button-badge">MODE 01</span>
-                            <p class="mode-button-title">📍 위치기반 모드</p>
-                            <p class="mode-button-subtitle">현재 위치 정보를 바탕으로 후보를 자동으로 채워요.</p>
-                        </div>
-                        <span class="mode-button-arrow">➜</span>
-                    </button>
-                    <button class="mode-button mode-button-team flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent text-left" data-mode-target="team">
-                        <div class="space-y-2">
-                            <span class="mode-button-badge">MODE 02</span>
-                            <p class="mode-button-title">🤝 팀플레이 모드</p>
-                            <p class="mode-button-subtitle">같은 엑세스 코드로 접속해 팀원과 함께 룰렛을 채워요.</p>
-                        </div>
-                        <span class="mode-button-arrow">➜</span>
-                    </button>
-                    <button class="mode-button mode-button-custom flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent text-left" data-mode-target="custom">
-                        <div class="space-y-2">
-                            <span class="mode-button-badge">MODE 03</span>
-                            <p class="mode-button-title">🎨 커스텀 모드</p>
-                            <p class="mode-button-subtitle">나만의 룰렛을 직접 만들고 자랑해 보세요.</p>
-                        </div>
-                        <span class="mode-button-arrow">➜</span>
-                    </button>
-                    <button class="mode-button mode-button-race flex items-center justify-between w-full h-28 px-6 rounded-2xl border border-transparent text-left" data-mode-target="race">
-                        <div class="space-y-2">
-                            <span class="mode-button-badge">MODE 04</span>
-                            <p class="mode-button-title">🏇 커피 내기 경마</p>
-                            <p class="mode-button-subtitle">즐겨 찾는 말들을 선택하고 레이스로 커피 내기 우승자를 정해요.</p>
-                        </div>
-                        <span class="mode-button-arrow">➜</span>
-                    </button>
-                </div>
+                <nav class="hidden items-center gap-2 sm:flex">
+                    <button id="home-btn" data-home-trigger class="mode-button rounded-full bg-white/40 px-5 py-2 text-sm font-semibold text-slate-700 shadow-brandSoft hover:bg-white/60">🏠 홈</button>
+                    <button class="mode-button rounded-full bg-white/30 px-4 py-2 text-sm font-semibold shadow-brandSoft hover:bg-white/50" data-mode-target="location">📍 위치</button>
+                    <button class="mode-button rounded-full bg-white/30 px-4 py-2 text-sm font-semibold shadow-brandSoft hover:bg-white/50" data-mode-target="team">🤝 팀</button>
+                    <button class="mode-button rounded-full bg-white/30 px-4 py-2 text-sm font-semibold shadow-brandSoft hover:bg-white/50" data-mode-target="custom">🎨 커스텀</button>
+                    <button class="mode-button rounded-full bg-white/30 px-4 py-2 text-sm font-semibold shadow-brandSoft hover:bg-white/50" data-mode-target="race">🏇 경마</button>
+                    <button class="mode-button rounded-full bg-white/20 px-4 py-2 text-sm font-semibold shadow-brandSoft hover:bg-white/35">⚙️ 설정</button>
+                </nav>
             </div>
-            
-        </section>
+        </header>
+        <main class="flex-1">
+            <section id="landing-screen" class="px-5 py-14 sm:px-8 sm:py-20">
+                <div class="mx-auto flex max-w-6xl flex-col gap-12 rounded-3xl bg-white/40 p-8 shadow-[0_35px_80px_-50px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-12 lg:flex-row">
+                    <div class="flex-1 space-y-6 text-left">
+                        <span class="mode-chip text-amber-600/90">오늘의 점심 파트너</span>
+                        <h1 class="font-brand text-4xl font-bold leading-tight text-slate-900 sm:text-5xl">오늘 뭐 먹지? <br class="hidden sm:block" /><span class="bg-gradient-to-r from-amber-400 via-amber-500 to-indigo-500 bg-clip-text text-transparent">멀티 플레이 룰렛</span></h1>
+                        <p class="text-base leading-relaxed text-slate-600 sm:text-lg">Linear형 카드와 글래스모피즘으로 재해석한 점심 추천 허브. 모드별 인터랙션을 즐기며 팀과 함께 플레이하거나, 나만의 룰렛을 만들어 공유할 수 있어요.</p>
+                        <div class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/60 px-3 py-1 font-semibold text-amber-600 shadow-sm">✨ Micro Interaction</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/60 px-3 py-1 font-semibold text-indigo-600 shadow-sm">🪟 Glassmorphism</span>
+                            <span class="inline-flex items-center gap-2 rounded-full bg-white/60 px-3 py-1 font-semibold text-slate-600 shadow-sm">🌈 Amber · Slate · Indigo</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-5">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <button class="mode-button mode-button-location flex items-center justify-between rounded-2xl px-5 py-5 text-left" data-mode-target="location">
+                                <div class="space-y-1.5">
+                                    <span class="mode-button-badge">MODE 01</span>
+                                    <p class="mode-button-title">📍 위치기반</p>
+                                    <p class="mode-button-subtitle text-sm">주변 맛집을 탐색하고 자동으로 룰렛을 채웁니다.</p>
+                                </div>
+                                <span class="mode-button-arrow text-3xl text-slate-200">➜</span>
+                            </button>
+                            <button class="mode-button mode-button-team flex items-center justify-between rounded-2xl px-5 py-5 text-left" data-mode-target="team">
+                                <div class="space-y-1.5">
+                                    <span class="mode-button-badge">MODE 02</span>
+                                    <p class="mode-button-title">🤝 팀플레이</p>
+                                    <p class="mode-button-subtitle text-sm">엑세스 코드로 연결해 한 번에 룰렛을 완성해요.</p>
+                                </div>
+                                <span class="mode-button-arrow text-3xl text-slate-200">➜</span>
+                            </button>
+                            <button class="mode-button mode-button-custom flex items-center justify-between rounded-2xl px-5 py-5 text-left" data-mode-target="custom">
+                                <div class="space-y-1.5">
+                                    <span class="mode-button-badge">MODE 03</span>
+                                    <p class="mode-button-title">🎨 커스텀</p>
+                                    <p class="mode-button-subtitle text-sm">룰렛을 직접 꾸미고 커뮤니티에 공유해 보세요.</p>
+                                </div>
+                                <span class="mode-button-arrow text-3xl text-slate-200">➜</span>
+                            </button>
+                            <button class="mode-button mode-button-race flex items-center justify-between rounded-2xl px-5 py-5 text-left" data-mode-target="race">
+                                <div class="space-y-1.5">
+                                    <span class="mode-button-badge">MODE 04</span>
+                                    <p class="mode-button-title">🏇 경마 모드</p>
+                                    <p class="mode-button-subtitle text-sm">몰입감 있는 애니메이션으로 커피 내기를 결정!</p>
+                                </div>
+                                <span class="mode-button-arrow text-3xl text-slate-200">➜</span>
+                            </button>
+                        </div>
+                        <div class="rounded-2xl bg-white/60 p-5 shadow-brandSoft">
+                            <p class="flex items-center gap-2 text-sm font-semibold text-slate-700"><span class="text-lg">💡</span>모드 전환 가이드</p>
+                            <p class="mt-2 text-sm leading-relaxed text-slate-600">각 모드는 독립된 섹션으로 구성되어 부드럽게 페이드/슬라이드 전환됩니다. 모바일에서는 하단 플로팅 탭으로 빠르게 이동할 수 있어요.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        <section id="landing-screen-mobile" class="flex-1 flex flex-col px-4 py-12 space-y-8 text-center">
-            <div class="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl space-y-4">
-                <p class="text-xs font-semibold tracking-[0.4em] text-indigo-600">오늘 뭐 먹지?</p>
-                <h1 class="text-3xl font-bold text-slate-900">오늘 뭐 먹지?</h1>
-                <p class="text-sm text-slate-600 leading-relaxed">네 가지 방식으로 점심 고민을 단번에 해결해 보세요.</p>
-            </div>
-            <div class="space-y-4">
-                <button class="mode-button mode-button-location flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="location">
-                    <div class="flex-1 text-left">
-                        <p class="text-sm font-semibold text-amber-500">MODE 01</p>
-                        <p class="text-xl font-bold text-slate-900 mt-1">📍 위치기반</p>
-                        <p class="text-sm text-slate-600 mt-1">현재 위치를 기반으로 근처 맛집을 추천 받아요.</p>
+            <section id="app-shell" class="hidden flex-1 px-5 py-12 sm:px-8">
+            <div class="mx-auto flex w-full max-w-7xl flex-col gap-10">
+                <div class="glass-card flex flex-col gap-6 rounded-3xl border border-white/40 bg-white/50 p-6 shadow-brandSoft backdrop-blur-lg sm:p-8">
+                    <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="space-y-3 text-left">
+                            <span class="mode-chip text-indigo-600/80">Active Mode</span>
+                            <h2 class="text-3xl font-bold text-slate-900 sm:text-4xl">모드를 바꿔가며 다양한 점심 아이디어를 만나보세요</h2>
+                            <p id="mode-description" class="text-sm text-slate-600 sm:text-base">현재 위치를 기반으로 주변 식당 후보를 자동으로 채워 드립니다.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <button class="mode-button mode-tab inline-flex items-center justify-center rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600 shadow-brandSoft transition-all hover:bg-white/90" data-mode-target="location">📍 위치</button>
+                            <button class="mode-button mode-tab inline-flex items-center justify-center rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600 shadow-brandSoft transition-all hover:bg-white/90" data-mode-target="team">🤝 팀</button>
+                            <button class="mode-button mode-tab inline-flex items-center justify-center rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600 shadow-brandSoft transition-all hover:bg-white/90" data-mode-target="custom">🎨 커스텀</button>
+                            <button class="mode-button mode-tab inline-flex items-center justify-center rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600 shadow-brandSoft transition-all hover:bg-white/90" data-mode-target="race">🏇 경마</button>
+                        </div>
                     </div>
-                    <span class="text-2xl text-slate-300">➜</span>
-                </button>
-                <button class="mode-button mode-button-team flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="team">
-                    <div class="flex-1 text-left">
-                        <p class="text-sm font-semibold text-emerald-500">MODE 02</p>
-                        <p class="text-xl font-bold text-slate-900 mt-1">🤝 팀플레이</p>
-                        <p class="text-sm text-slate-600 mt-1">같은 코드를 입력하면 팀원들과 메뉴를 함께 채워요.</p>
-                    </div>
-                    <span class="text-2xl text-slate-300">➜</span>
-                </button>
-                <button class="mode-button mode-button-custom flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="custom">
-                    <div class="flex-1 text-left">
-                        <p class="text-sm font-semibold text-indigo-500">MODE 03</p>
-                        <p class="text-xl font-bold text-slate-900 mt-1">🎨 커스텀</p>
-                        <p class="text-sm text-slate-600 mt-1">먹고 싶은 메뉴를 직접 입력해 나만의 룰렛을 만들어요.</p>
-                    </div>
-                    <span class="text-2xl text-slate-300">➜</span>
-                </button>
-                <button class="mode-button mode-button-race flex items-center w-full px-5 py-4 rounded-2xl border border-transparent text-left bg-white shadow-sm" data-mode-target="race">
-                    <div class="flex-1 text-left">
-                        <p class="text-sm font-semibold text-rose-500">MODE 04</p>
-                        <p class="text-xl font-bold text-slate-900 mt-1">🏇 커피 내기</p>
-                        <p class="text-sm text-slate-600 mt-1">말을 선택하고 레이스를 달려 승자를 가볍게 정해요.</p>
-                    </div>
-                    <span class="text-2xl text-slate-300">➜</span>
-                </button>
-            </div>
-            <div class="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-left space-y-3">
-                <p class="text-sm font-semibold text-slate-700 flex items-center"><span class="text-lg mr-2">💡</span>모바일 팁</p>
-                <p class="text-sm text-slate-600 leading-relaxed">룰렛 결과는 하단 카드에서 바로 확인할 수 있고, 전화걸기와 길찾기도 모바일에서 바로 실행돼요.</p>
-            </div>
-        </section>
-
-        <section id="app-shell" class="hidden flex-1 px-4 py-10">
-            <div class="w-full max-w-7xl mx-auto space-y-8">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div class="space-y-2">
-                        <h2 class="text-3xl font-bold text-gray-900">모드를 바꿔가며 다양한 점심 아이디어를 만나보세요</h2>
-                        <p id="mode-description" class="text-sm text-gray-500">현재 위치를 기반으로 주변 식당 후보를 자동으로 채워 드립니다.</p>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full sm:w-auto">
-                        <button id="home-btn" class="mode-button mode-tab flex items-center justify-center h-10 px-4 rounded-full border border-transparent bg-white shadow-sm text-sm font-semibold text-gray-600">
-                            Home
-                        </button>
-                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="location">
-                            <span class="mode-tab-label">📍 위치기반</span>
-                        </button>
-                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="team">
-                            <span class="mode-tab-label">🤝 팀플레이</span>
-                        </button>
-                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="custom">
-                            <span class="mode-tab-label">🎨 커스텀</span>
-                        </button>
-                        <button class="mode-button mode-tab flex items-center justify-center h-14 px-5 rounded-full border border-transparent bg-white shadow-sm" data-mode-target="race">
-                            <span class="mode-tab-label">🏇 경마</span>
-                        </button>
+                    <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-indigo-500">🏠 홈 버튼은 상단 바에서 언제든 접근 가능</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 font-semibold text-amber-600">🔁 전환 시 페이드 &amp; 슬라이드</span>
                     </div>
                 </div>
-                <div class="flex flex-col xl:flex-row gap-6">
+                <div class="flex flex-col gap-6 xl:flex-row">
                     <aside class="w-full xl:w-72 space-y-6">
-                        <div id="restaurant-list-container" data-mode-visible="location" class="bg-white p-5 rounded-2xl shadow-lg mode-hidden">
+                        <div id="restaurant-list-container" data-mode-visible="location" class="mode-panel mode-hidden rounded-3xl border border-white/40 bg-white/70 p-5 shadow-brandSoft backdrop-blur-md">
                             <div class="flex items-center justify-between mb-3">
                                 <h3 class="text-xl font-bold text-gray-900">오늘의 후보</h3>
                                 <span class="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">자동 추천</span>
@@ -463,7 +555,7 @@
                             <div id="candidate-lists-wrapper" class="space-y-4"></div>
                         </div>
 
-                        <div id="team-card" data-mode-visible="team" class="bg-white rounded-2xl shadow-lg p-5 space-y-4 mode-hidden">
+                        <div id="team-card" data-mode-visible="team" class="mode-panel mode-hidden rounded-3xl border border-white/40 bg-white/70 p-5 shadow-brandSoft backdrop-blur-md space-y-4">
                             <div class="text-center space-y-1">
                                 <h3 class="text-xl font-bold text-gray-900">🤝 팀플레이</h3>
                                 <p class="text-xs text-gray-500">같은 엑세스 코드로 접속하면 하나의 룰렛을 함께 채울 수 있어요.</p>
@@ -482,7 +574,7 @@
                             <div id="team-slots-container" class="space-y-2 hidden"></div>
                         </div>
 
-                        <div id="race-summary-card" data-mode-visible="race" class="bg-white rounded-2xl shadow-lg p-5 space-y-4 mode-hidden">
+                        <div id="race-summary-card" data-mode-visible="race" class="mode-panel mode-hidden rounded-3xl border border-white/40 bg-white/70 p-5 shadow-brandSoft backdrop-blur-md space-y-4">
                             <div class="text-center space-y-1">
                                 <h3 class="text-xl font-bold text-gray-900">🏆 우승 기록</h3>
                                 <p class="text-xs text-gray-500">가장 많이 우승한 말들을 확인하세요.</p>
@@ -494,7 +586,7 @@
                     </aside>
 
                     <section class="flex-1 space-y-6">
-                        <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-6" data-mode-visible="location,team,custom">
+                        <div class="mode-panel rounded-3xl border border-white/40 bg-white/75 p-6 sm:p-8 shadow-brandSoft backdrop-blur-lg space-y-6" data-mode-visible="location,team,custom">
                             <div class="space-y-4 text-center">
                                 <span id="active-mode-badge" class="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-slate-100 text-sm font-semibold text-slate-600">📍 위치기반 모드</span>
                                 <h3 class="text-3xl font-bold text-gray-900">오늘 뭐 먹지?</h3>
@@ -610,7 +702,7 @@
                             </div>
                         </div>
 
-                        <div id="race-panel" data-mode-visible="race" class="bg-white rounded-2xl shadow-xl p-6 sm:p-8 space-y-6 mode-hidden">
+                        <div id="race-panel" data-mode-visible="race" class="mode-panel mode-hidden rounded-3xl border border-white/40 bg-white/75 p-6 sm:p-8 shadow-brandSoft backdrop-blur-lg space-y-6">
                             <div class="space-y-2 text-center">
                                 <span class="inline-flex items-center justify-center gap-2 px-4 py-1 rounded-full bg-amber-100 text-sm font-semibold text-amber-600">🏇 MODE 04</span>
                                 <h3 class="text-3xl font-bold text-gray-900">커피 내기 경마 트랙</h3>
@@ -667,12 +759,12 @@
                         </div>
                     </section>
 
-                    <aside id="custom-panels" data-mode-visible="custom" class="w-full xl:w-96 space-y-6 mode-hidden">
-                        <div class="bg-white rounded-2xl shadow-lg p-5">
+                    <aside id="custom-panels" data-mode-visible="custom" class="mode-panel mode-hidden w-full xl:w-96 space-y-6">
+                        <div class="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-brandSoft backdrop-blur-md">
                             <h3 class="text-xl font-bold text-center mb-2">나의 룰렛 목록</h3>
                             <div id="saved-roulettes-list" class="h-48 overflow-y-auto custom-scrollbar"></div>
                         </div>
-                        <div class="bg-white rounded-2xl shadow-lg p-5 space-y-4">
+                        <div class="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-brandSoft backdrop-blur-md space-y-4">
                             <div class="text-center space-y-1">
                                 <h3 class="text-xl font-bold text-gray-900">📝 직접 차트 만들기</h3>
                                 <p class="text-xs text-gray-500">원하는 칸 수(최소 2칸 ~ 최대 9칸)로 자유롭게 채워보세요. 비어 있는 칸은 자동으로 ‘다시 한 번’으로 채워집니다.</p>
@@ -696,18 +788,27 @@
                             <div id="custom-chart-inputs" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
                             <button id="apply-custom-btn" class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 rounded-md">적용하기</button>
                         </div>
-                        <div class="bg-white rounded-2xl shadow-lg p-5 space-y-3">
+                        <div class="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-brandSoft backdrop-blur-md space-y-3">
                             <div class="text-center space-y-1">
                                 <h3 class="text-xl font-bold text-gray-900">👑 룰렛 자랑하기</h3>
                                 <p class="text-xs text-gray-500">좋아요가 많은 순서대로 보여드려요. 싫어요가 많은 글은 운영자가 확인 후 숨깁니다.</p>
                             </div>
-                            <input type="search" id="search-shared" placeholder="예: (역삼) 족발" class="w-full p-2 border rounded-md">
+                            <input type="search" id="search-shared" placeholder="예: (역삼) 족발" class="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm shadow-inner focus:border-amber-200 focus:outline-none focus:ring-2 focus:ring-amber-200/60">
                             <div id="shared-roulettes-list" class="h-[430px] overflow-y-auto custom-scrollbar"></div>
                         </div>
                     </aside>
                 </div>
             </div>
         </section>
+        </main>
+        <nav id="mobile-mode-nav" class="floating-nav fixed bottom-6 left-1/2 z-40 flex w-[92%] max-w-md -translate-x-1/2 items-center justify-between gap-1 px-2 py-2 sm:hidden hidden">
+            <button data-home-trigger aria-label="홈으로 이동" class="mode-button inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-base">🏠</button>
+            <button class="mode-button inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-base" data-mode-target="location" aria-label="위치 모드">📍</button>
+            <button class="mode-button inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-base" data-mode-target="team" aria-label="팀 모드">🤝</button>
+            <button class="mode-button inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-base" data-mode-target="custom" aria-label="커스텀 모드">🎨</button>
+            <button class="mode-button inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-base" data-mode-target="race" aria-label="경마 모드">🏇</button>
+            <button class="mode-button inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-base" aria-label="설정">⚙️</button>
+        </nav>
     </div>
 
     <script type="module">
@@ -762,7 +863,8 @@
         const modeDescription = document.getElementById('mode-description');
         const modeButtons = document.querySelectorAll('[data-mode-target]');
         const modeScopedElements = document.querySelectorAll('[data-mode-visible]');
-        const homeBtn = document.getElementById('home-btn');
+        const homeButtons = document.querySelectorAll('[data-home-trigger]');
+        const mobileModeNav = document.getElementById('mobile-mode-nav');
         const racePanel = document.getElementById('race-panel');
         const raceHorseCountInput = document.getElementById('race-horse-count-input');
         const raceHorseCountRange = document.getElementById('race-horse-count-range');
@@ -1873,7 +1975,20 @@
                     .map(mode => mode.trim())
                     .filter(Boolean);
                 const shouldShow = availableModes.includes(activeMode);
-                element.classList.toggle('mode-hidden', !shouldShow);
+                const prefersTransition = element.classList.contains('mode-panel');
+                if (prefersTransition) {
+                    if (shouldShow) {
+                        element.classList.remove('mode-hidden');
+                        element.classList.remove('mode-panel-active');
+                        void element.offsetWidth;
+                        element.classList.add('mode-panel-active');
+                    } else {
+                        element.classList.remove('mode-panel-active');
+                        element.classList.add('mode-hidden');
+                    }
+                } else {
+                    element.classList.toggle('mode-hidden', !shouldShow);
+                }
             });
         }
 
@@ -1890,6 +2005,7 @@
             landingScreen.classList.add('hidden');
             landingScreenMobile?.classList.add('hidden');
             appShell.classList.remove('hidden');
+            mobileModeNav?.classList.remove('hidden');
 
             updateModeButtons(mode);
             updateModeScopedElements(mode);
@@ -1980,6 +2096,7 @@
             landingScreen.classList.remove('hidden');
             landingScreenMobile?.classList.remove('hidden');
             appShell.classList.add('hidden');
+            mobileModeNav?.classList.add('hidden');
             modeButtons.forEach(button => button.classList.remove('mode-button-active'));
             modeScopedElements.forEach(element => element.classList.add('mode-hidden'));
             statusMessage.textContent = '모드를 선택해 주세요.';
@@ -2828,7 +2945,7 @@
             button.addEventListener('click', () => setMode(button.dataset.modeTarget));
         });
         locationGameSelect?.addEventListener('change', () => setLocationGameType(locationGameSelect.value));
-        homeBtn.addEventListener('click', returnToLanding);
+        homeButtons.forEach(button => button.addEventListener('click', returnToLanding));
         resetBtn.addEventListener('click', () => handleReset());
         startBtn.addEventListener('click', handleStart);
         saveBtn.addEventListener('click', handleSave);
